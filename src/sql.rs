@@ -1560,11 +1560,27 @@ pub(crate) fn appended_statement(buffer: &str, statement: &str) -> String {
         return statement.to_string();
     }
 
-    let terminator = match text.ends_with(';') {
-        true => "",
-        false => ";",
-    };
-    format!("{text}{terminator}\n\n{statement}")
+    format!("{}\n\n{statement}", terminated(text))
+}
+
+fn terminated(text: &str) -> String {
+    let mut parser = Parser::new();
+    let end = parser
+        .set_language(&tree_sitter_sequel::LANGUAGE.into())
+        .ok()
+        .and_then(|_| parser.parse(text, None))
+        .and_then(|tree| {
+            let root = tree.root_node();
+            let mut cursor = root.walk();
+            root.children(&mut cursor)
+                .filter(|node| !matches!(node.kind(), "comment" | "marginalia"))
+                .last()
+                .map(|node| node.end_byte())
+        });
+    match end {
+        Some(end) if !text[..end].ends_with(';') => format!("{};{}", &text[..end], &text[end..]),
+        _ => text.to_string(),
+    }
 }
 
 /// What a connection is allowed to do, and what a statement needs in order to
@@ -4353,6 +4369,28 @@ mod tests {
             appended_statement("SELECT 1;", "UPDATE t SET a = 1"),
             "SELECT 1;\n\nUPDATE t SET a = 1"
         );
+    }
+
+    #[test]
+    fn a_trailing_comment_does_not_swallow_the_terminator() {
+        for (buffer, expected) in [
+            ("SELECT 1 -- note", "SELECT 1; -- note"),
+            ("SELECT 1 -- note;", "SELECT 1; -- note;"),
+            ("SELECT 1 /* note */", "SELECT 1; /* note */"),
+            ("SELECT 1; -- note", "SELECT 1; -- note"),
+            ("SELECT 1; /* note; */", "SELECT 1; /* note; */"),
+            ("SELECT 'a;'", "SELECT 'a;';"),
+            ("SELECT 1;;", "SELECT 1;;"),
+        ] {
+            let appended = appended_statement(buffer, "UPDATE t SET a = 1");
+
+            assert_eq!(appended, format!("{expected}\n\nUPDATE t SET a = 1"));
+            assert_eq!(
+                Buffer::parse(&appended).statements().len(),
+                2,
+                "{appended:?}"
+            );
+        }
     }
 
     #[test]
