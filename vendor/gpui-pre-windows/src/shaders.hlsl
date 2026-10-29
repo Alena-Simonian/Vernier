@@ -1267,7 +1267,7 @@ float4 polychrome_sprite_fragment(PolychromeSpriteFragmentInput input): SV_Targe
     return color;
 }
 
-// dbdelve patch: backdrop blur, ported from zui. These passes are lazy and stay
+// vernier patch: backdrop blur, ported from zui. These passes are lazy and stay
 // within the window. b2, not zui's b1, since BatchParams already holds b1
 // here; the layout mirrors `Params` in directx_renderer/backdrop.rs.
 cbuffer BackdropParams: register(b2) {

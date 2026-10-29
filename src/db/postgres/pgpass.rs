@@ -11,7 +11,7 @@ pub(super) enum Lookup {
         password: String,
         path: PathBuf,
     },
-    /// libpq refuses a file the group or others can read, and so does dbdelve.
+    /// libpq refuses a file the group or others can read, and so does vernier.
     #[cfg(unix)]
     Exposed(PathBuf),
     Missing,
@@ -71,7 +71,7 @@ pub(super) fn lookup(host: &str, port: u16, database: &str, user: &str) -> Looku
         return Lookup::Missing;
     }
     // libpq reads bytes, so a stray byte in a comment or another line must not
-    // cost every line its use. A field holding one matches nothing dbdelve
+    // cost every line its use. A field holding one matches nothing vernier
     // asks for, which leaves the first-match order as libpq has it.
     let contents = String::from_utf8_lossy(&contents);
     match password(&contents, [host, &port.to_string(), database, user]) {

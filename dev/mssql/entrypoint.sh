@@ -14,14 +14,14 @@ done
 # restart not to re-run the seed against an already-seeded database. It is
 # written only once the seed succeeds, so a seed that failed part way left its
 # objects behind unmarked: drop them first, or every later start fails on them.
-MARKER=/var/opt/mssql/data/.dbdelve-seeded
+MARKER=/var/opt/mssql/data/.vernier-seeded
 if [ ! -f "$MARKER" ]; then
-    $SQLCMD -Q "IF DB_ID('dbdelve_dev') IS NOT NULL BEGIN
-                    ALTER DATABASE dbdelve_dev SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                    DROP DATABASE dbdelve_dev;
+    $SQLCMD -Q "IF DB_ID('vernier_dev') IS NOT NULL BEGIN
+                    ALTER DATABASE vernier_dev SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                    DROP DATABASE vernier_dev;
                 END;
-                IF SUSER_ID('dbdelve') IS NOT NULL DROP LOGIN dbdelve;"
-    $SQLCMD -i /dbdelve-init/001-dbdelve-demo.sql
+                IF SUSER_ID('vernier') IS NOT NULL DROP LOGIN vernier;"
+    $SQLCMD -i /vernier-init/001-vernier-demo.sql
     touch "$MARKER"
 fi
 

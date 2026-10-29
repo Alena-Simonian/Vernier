@@ -1283,7 +1283,7 @@ impl PopupMenu {
                 .p_0()
                 .my_0p5()
                 .mx_neg_1()
-                // dbdelve patch: a hairline on frost, where a 2px rule reads as
+                // vernier patch: a hairline on frost, where a 2px rule reads as
                 // a bar laid across the glass.
                 .border_b(if popover_frosted(cx) { px(1.) } else { px(2.) })
                 .border_color(cx.theme().border)
@@ -1510,7 +1510,7 @@ impl Render for PopupMenu {
             .on_action(cx.listener(Self::dismiss))
             .on_mouse_down_out(cx.listener(Self::on_mouse_down_out))
             .popover_style(cx)
-            // dbdelve patch: menus use chrome typography, not the editor or grid
+            // vernier patch: menus use chrome typography, not the editor or grid
             // font inherited from the element that opened them.
             .font_family(cx.theme().font_family.clone())
             .text_color(cx.theme().popover_foreground)

@@ -568,7 +568,7 @@ mod tests {
 
     #[test]
     fn opening_a_path_that_is_not_there_names_it_and_creates_nothing() {
-        let path = std::env::temp_dir().join("dbdelve-turso-missing.db");
+        let path = std::env::temp_dir().join("vernier-turso-missing.db");
         let _ = std::fs::remove_file(&path);
         let error = Connection::open(path.to_str().unwrap(), 0)
             .err()
@@ -638,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    fn an_insert_dbdelve_writes_passes_its_gate_and_runs() {
+    fn an_insert_vernier_writes_passes_its_gate_and_runs() {
         let connection = memory("CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT);");
         let statement = crate::sql::insert_row(
             Engine::Turso,
@@ -658,7 +658,7 @@ mod tests {
 
     #[test]
     fn a_file_opens_plain_and_opens_again_with_a_shared_wal_sidecar_beside_it() {
-        let dir = std::env::temp_dir().join(format!("dbdelve-turso-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vernier-turso-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let plain = dir.join("plain.db");
         let beside = dir.join("beside.db");
@@ -686,7 +686,7 @@ mod tests {
 
     #[test]
     fn a_write_waits_for_a_lock_another_connection_releases() {
-        let dir = std::env::temp_dir().join(format!("dbdelve-turso-busy-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vernier-turso-busy-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("busy.db");
         let holder = Connection::open_at(path.to_str().unwrap(), None, 0).unwrap();
@@ -710,14 +710,14 @@ mod tests {
     }
 
     fn live() -> Option<Connection> {
-        let path = std::env::var("dbdelve_TURSO_PATH").ok()?;
-        Some(Connection::open(&path, 0).expect("the Turso database named by dbdelve_TURSO_PATH"))
+        let path = std::env::var("vernier_TURSO_PATH").ok()?;
+        Some(Connection::open(&path, 0).expect("the Turso database named by vernier_TURSO_PATH"))
     }
 
     #[test]
-    #[ignore = "needs dbdelve_TURSO_PATH"]
+    #[ignore = "needs vernier_TURSO_PATH"]
     fn live_an_import_round_trips_on_turso() {
-        let connection = live().expect("dbdelve_TURSO_PATH is set");
+        let connection = live().expect("vernier_TURSO_PATH is set");
         crate::import_rows::live_round_trip(
             super::super::Connection::Turso(connection),
             Engine::Turso,
@@ -726,9 +726,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "needs dbdelve_TURSO_PATH"]
+    #[ignore = "needs vernier_TURSO_PATH"]
     fn live_catalog_structure_and_a_read_round_trip() {
-        let connection = live().expect("dbdelve_TURSO_PATH is set");
+        let connection = live().expect("vernier_TURSO_PATH is set");
         let catalog = connection.catalog().expect("the catalog loads");
         let relations: Vec<_> = catalog
             .schemas
@@ -768,7 +768,7 @@ mod tests {
 
     fn conformance_subject() -> crate::db::conformance::Subject {
         use crate::db::conformance::{COLUMNS, Fixture, Subject, sql_find, sql_read};
-        let path = std::env::var("dbdelve_TURSO_PATH").expect("dbdelve_TURSO_PATH is required");
+        let path = std::env::var("vernier_TURSO_PATH").expect("vernier_TURSO_PATH is required");
         Subject {
             connection: crate::db::Connection::open(crate::db::ConnectionConfig::Turso {
                 path,
@@ -803,7 +803,7 @@ mod tests {
 
     crate::db::conformance::suite!(
         live_conformance,
-        "requires a Turso database file configured through dbdelve_TURSO_PATH, a copy of the SQLite development database",
+        "requires a Turso database file configured through vernier_TURSO_PATH, a copy of the SQLite development database",
         conformance_subject:
         connects,
         query_round_trip,

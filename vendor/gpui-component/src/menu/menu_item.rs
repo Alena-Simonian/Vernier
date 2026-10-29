@@ -113,7 +113,7 @@ impl RenderOnce for MenuItemElement {
                 // Not `group_hover` on the item's own group: GPUI styles an
                 // element before registering its group, and that fallback keeps
                 // the pointer's item lit after a key moves the highlight away.
-                // dbdelve patch: `popover_highlight`, a wash on frost.
+                // vernier patch: `popover_highlight`, a wash on frost.
                 let highlight = popover_highlight(cx);
                 let (fill, foreground) = (highlight.fill, highlight.foreground);
                 this.hover(|this| this.bg(fill).text_color(foreground))

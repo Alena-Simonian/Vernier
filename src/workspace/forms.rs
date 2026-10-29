@@ -1106,7 +1106,7 @@ impl Workspace {
                 "Mode",
                 // `Destructive::Unreadable` only reaches `Upgrade` where the
                 // server's read-only setting cannot be relied on to stop a
-                // write dbdelve cannot parse (`Engine::unreadable_reason`), so
+                // write vernier cannot parse (`Engine::unreadable_reason`), so
                 // the reason is worth spelling out rather than reading like an
                 // ordinary mode shortfall.
                 if pending
@@ -1115,7 +1115,7 @@ impl Workspace {
                     .contains(&Destructive::Unreadable)
                 {
                     format!(
-                        "{name} is in {current_mode} mode. dbdelve can't parse this, and {}, \
+                        "{name} is in {current_mode} mode. Vernier can't parse this, and {}, \
                          so it needs {}.",
                         profile.config.engine().unreadable_reason(),
                         needed.label()
@@ -1141,7 +1141,7 @@ impl Workspace {
             ),
             Stop::RunOnce => (
                 "Unreadable statement",
-                "dbdelve can't parse this, so it can't tell what it does or whether \
+                "Vernier can't parse this, so it can't tell what it does or whether \
                  this connection's mode covers it."
                     .to_string(),
                 "Run once".to_string(),
@@ -1361,7 +1361,7 @@ impl Workspace {
             .map(|captured| relative_age(store::captured_at().saturating_sub(captured)))
             .unwrap_or_else(|| "moments".into());
         // What Refresh sends, shown for the same reason the mode prompt shows
-        // its statement. Only a buffer's: a relation's is dbdelve's own
+        // its statement. Only a buffer's: a relation's is vernier's own
         // preview of the table.
         let refresh_sql = profile
             .session
@@ -1397,7 +1397,7 @@ impl Workspace {
                                 .text_size(px(layout::chrome(layout::TEXT_SM)))
                                 .text_color(t.text_muted)
                                 .child(format!(
-                                    "These rows were fetched {age} ago, before dbdelve was \
+                                    "These rows were fetched {age} ago, before vernier was \
                                      last closed, and were restored from that session rather \
                                      than read again. Anything changed in the database since \
                                      isn't shown here, and an edit overwrites whatever the \
@@ -1911,7 +1911,7 @@ impl Workspace {
                         .mx(px(layout::SPACE_XS))
                         .rounded(px(layout::RADIUS_CONTROL))
                         // `ListItem` sizes its text in `rems`, which tracks
-                        // the library's 16 rather than dbdelve's body size.
+                        // the library's 16 rather than vernier's body size.
                         .text_size(px(layout::chrome(layout::TEXT_MD)))
                         .pl(px(
                             layout::SPACE_SM + entry.depth() as f32 * layout::SPACE_MD

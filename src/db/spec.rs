@@ -403,10 +403,10 @@ impl CountAll {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Transaction {
     /// MySQL's own spelling is `START TRANSACTION`, and `BEGIN` is its
-    /// documented alias outside a stored program. The alias is what dbdelve
+    /// documented alias outside a stored program. The alias is what vernier
     /// writes because the brackets go into the statement text, where
     /// `sql::is_generated_write` has to read them back: the tree-sitter
-    /// grammar has no `START TRANSACTION`, so the gate would refuse dbdelve's
+    /// grammar has no `START TRANSACTION`, so the gate would refuse vernier's
     /// own batch.
     Begin,
     BeginTransaction,
@@ -668,7 +668,7 @@ pub(crate) const MYSQL: EngineSpec = EngineSpec {
     hints: Hints::DEFAULT,
     sql: SqlSpec {
         identifier_quote: IdentifierQuote::Backtick,
-        // Unless `NO_BACKSLASH_ESCAPES` is set, which is not dbdelve's to know
+        // Unless `NO_BACKSLASH_ESCAPES` is set, which is not vernier's to know
         // or to set.
         backslash_escapes: true,
         boolean_literal: BooleanLiteral::OneZero,

@@ -165,7 +165,7 @@ pub fn config_from_url(url: &str) -> Result<MongoConfig, String> {
             "tlscafile" => root_certificate = Some(value).filter(|path| !path.is_empty()),
             lowered if lowered.starts_with("tls") => {
                 return Err(format!(
-                    "Connection URL parameter {key} is not one dbdelve can pass to MongoDB."
+                    "Connection URL parameter {key} is not one Vernier can pass to MongoDB."
                 ));
             }
             _ => passed.push(pair),
@@ -197,7 +197,7 @@ pub fn config_from_url(url: &str) -> Result<MongoConfig, String> {
             return Err("Connection URL sets tls=false beside options for TLS.".into());
         }
         Some(false) => SslMode::Disable,
-        // A seed list's TLS is off unless asked for, and dbdelve's default
+        // A seed list's TLS is off unless asked for, and vernier's default
         // tries it anyway; an SRV name's is on, so its URL means verified.
         None if !srv && !tls_keys => SslMode::default(),
         Some(true) | None if unchecked => SslMode::Require,
@@ -319,7 +319,7 @@ fn owned_option(options: &str, tunnelled: bool) -> Option<String> {
         })
 }
 
-/// dbdelve's five rungs as the driver's TLS settings.
+/// vernier's five rungs as the driver's TLS settings.
 ///
 /// The driver's rustls offers no way to skip the hostname check alone, so
 /// `verify-ca` checks the name too: stricter than asked, never weaker. Without
@@ -435,7 +435,7 @@ impl Connection {
         let connection_string = connection_string(config)?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(1)
-            .thread_name("dbdelve-mongodb")
+            .thread_name("vernier-mongodb")
             .enable_all()
             .build()
             .map_err(|error| plain_error(format!("Could not start the connection: {error}")))?;
@@ -448,7 +448,7 @@ impl Connection {
                         .await
                         .map_err(|error| plain_error(error.kind.to_string()))?;
                     let bound = Duration::from_secs(CONNECT_TIMEOUT_SECONDS);
-                    options.app_name.get_or_insert_with(|| "DBDelve".into());
+                    options.app_name.get_or_insert_with(|| "Vernier".into());
                     options.server_selection_timeout.get_or_insert(bound);
                     options.connect_timeout.get_or_insert(bound);
                     if let Some(dial) = dial {
@@ -1802,7 +1802,7 @@ impl<'a> Run<'a> {
     fn start(connection: &'a Connection, token: &'a CancelToken) -> Result<Self, DbError> {
         let session = connection.call(connection.client().start_session())?;
         let id = session.id().get("id").cloned().unwrap_or(Bson::Null);
-        let handle = format!("dbdelve:{}", Uuid::new());
+        let handle = format!("vernier:{}", Uuid::new());
         let (stop, stopped) = oneshot::channel();
         lock(&connection.stops).insert(handle.clone(), (id, stop));
         let asked = token.0.lock().is_ok_and(|mut running| {
@@ -2677,12 +2677,12 @@ mod tests {
 
     #[test]
     fn a_url_fills_the_fields_without_inventing_a_port_or_a_user() {
-        let config = url("mongodb://dbdelve:dbdelve@127.0.0.1:57017/dbdelve_dev");
+        let config = url("mongodb://vernier:vernier@127.0.0.1:57017/vernier_dev");
         assert_eq!(config.server.host, "127.0.0.1");
         assert_eq!(config.server.port, Some(57017));
-        assert_eq!(config.server.database, "dbdelve_dev");
-        assert_eq!(config.server.user, "dbdelve");
-        assert_eq!(config.server.password, "dbdelve");
+        assert_eq!(config.server.database, "vernier_dev");
+        assert_eq!(config.server.user, "vernier");
+        assert_eq!(config.server.password, "vernier");
         assert_eq!(config.server.sslmode, SslMode::Prefer);
         assert!(!config.srv);
         assert_eq!(config.options, "");
@@ -2895,8 +2895,8 @@ mod tests {
     #[test]
     fn switching_database_keeps_the_login_where_it_was() {
         let mut config = url("mongodb://u:p@h/r%26d?replicaSet=rs0");
-        config.set_database("dbdelve_archive".into());
-        assert_eq!(config.server.database, "dbdelve_archive");
+        config.set_database("vernier_archive".into());
+        assert_eq!(config.server.database, "vernier_archive");
         // The user's own options are never written to.
         assert_eq!(config.options, "replicaSet=rs0");
         assert_eq!(
@@ -2967,7 +2967,7 @@ mod tests {
                 // Nothing that resolves: starting ssh at all would fail
                 // differently.
                 ssh: Some(SshTunnel {
-                    host: "dbdelve-nowhere.invalid".into(),
+                    host: "vernier-nowhere.invalid".into(),
                     ..SshTunnel::default()
                 }),
                 ..config.server
@@ -3307,10 +3307,10 @@ mod tests {
         assert_eq!(with_id(doc! { "a": 1, "_id": 7 }).0, Bson::Int32(7));
     }
 
-    /// The server the `live_` tests talk to, from `dbdelve_MONGO_URL`.
+    /// The server the `live_` tests talk to, from `vernier_MONGO_URL`.
     fn live_config() -> MongoConfig {
-        let url = std::env::var("dbdelve_MONGO_URL").expect("dbdelve_MONGO_URL is required");
-        let mut config = config_from_url(&url).expect("dbdelve_MONGO_URL should parse");
+        let url = std::env::var("vernier_MONGO_URL").expect("vernier_MONGO_URL is required");
+        let mut config = config_from_url(&url).expect("vernier_MONGO_URL should parse");
         // The compose server speaks no TLS, and these tests are the one place
         // a plaintext connection is the point.
         config.server.sslmode = SslMode::Disable;
@@ -3395,7 +3395,7 @@ mod tests {
     const SLOW: &str = "db.events.find({ $where: 'sleep(1000) || false' }).maxTimeMS(60000)";
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_query_round_trip() {
         let connection = live();
         let accounts = ran(
@@ -3432,7 +3432,7 @@ mod tests {
         assert_eq!(field(&grouped, 0, "_id").0, Some("enterprise"));
         let archived = ran(
             &connection,
-            "db.getSiblingDB('dbdelve_archive').closed_accounts.find()",
+            "db.getSiblingDB('vernier_archive').closed_accounts.find()",
         );
         assert_eq!(archived.rows.len(), 2);
         let indexes = ran(&connection, "db.accounts.getIndexes()");
@@ -3453,7 +3453,7 @@ mod tests {
         );
         let databases = ran(&connection, "show dbs");
         assert_eq!(names(&databases), ["name", "sizeOnDisk"]);
-        assert_eq!(field(&databases, 1, "name").0, Some("dbdelve_dev"));
+        assert_eq!(field(&databases, 1, "name").0, Some("vernier_dev"));
 
         let ping = ran(&connection, "db.adminCommand({ ping: 1 })");
         assert_eq!(field(&ping, 0, "ok").0, Some("1"));
@@ -3497,7 +3497,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_explain_reads_a_plan_for_each_statement_kind_in_both_modes() {
         use crate::db::ExplainMode;
         let connection = live();
@@ -3540,7 +3540,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_every_seeded_bson_type_renders_as_specified() {
         let result = ran(&live(), "db.bson_types.find()");
         for (name, shown, alias) in [
@@ -3576,7 +3576,7 @@ mod tests {
                 Some("018f1f6e-7c2a-7000-8000-0000000000ff"),
                 "binData",
             ),
-            ("regex", Some("/^dbdelve.*$/i"), "regex"),
+            ("regex", Some("/^vernier.*$/i"), "regex"),
             (
                 "javascript",
                 Some("Code('function () { return 1; }')"),
@@ -3603,7 +3603,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_one_field_of_many_types_is_mixed_and_each_cell_says_its_own() {
         let result = ran(&live(), "db.mixed_shapes.find().sort({ _id: 1 })");
         assert_eq!(names(&result)[..2], ["_id", "value"]);
@@ -3638,7 +3638,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_null_email_and_a_missing_one_are_told_apart() {
         let result = ran(&live(), "db.accounts.find({}, { name: 1, email: 1 })");
         let email = |name: &str| {
@@ -3677,7 +3677,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_find_on_a_collection_is_editable_by_its_id() {
         let connection = live();
         for statement in [
@@ -3691,7 +3691,7 @@ mod tests {
                 .edit
                 .as_ref()
                 .unwrap_or_else(|| panic!("{statement}"));
-            assert_eq!(edit.schema, "dbdelve_dev", "{statement}");
+            assert_eq!(edit.schema, "vernier_dev", "{statement}");
             assert_eq!(edit.keys, [0], "{statement}");
             assert_eq!(edit.columns[0].as_deref(), Some("_id"), "{statement}");
         }
@@ -3705,7 +3705,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_what_is_not_a_collections_whole_documents_is_read_only() {
         let connection = live();
         for statement in [
@@ -3719,7 +3719,7 @@ mod tests {
             "db.accounts.find().projection({ name: { $toUpper: '$name' } })",
             "db.accounts.find({}, {}, { showRecordId: true })",
             "db.accounts.find({}, {}, { returnKey: true })",
-            "db.getSiblingDB('dbdelve_dev').accounts.find()",
+            "db.getSiblingDB('vernier_dev').accounts.find()",
             "db.runCommand({ find: 'accounts' })",
             "db.accounts.countDocuments()",
         ] {
@@ -3729,13 +3729,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_an_edited_document_keeps_every_type_through_update_insert_and_delete() {
         use crate::result_grid::{NewValue, ResultGrid};
         use crate::sql::{self, Mode};
 
         let connection = live();
-        let scratch = Scratch(&connection, format!("dbdelve_test_{}", ObjectId::new()));
+        let scratch = Scratch(&connection, format!("vernier_test_{}", ObjectId::new()));
         let collection = format!("db.getCollection('{}')", scratch.1);
         ran(
             &connection,
@@ -3800,7 +3800,7 @@ mod tests {
 
         let insert = sql::insert_row(
             Engine::MongoDb,
-            "dbdelve_dev",
+            "vernier_dev",
             &scratch.1,
             &[
                 ("_id", Some("2")),
@@ -3857,7 +3857,7 @@ mod tests {
 
         let delete = sql::delete_row(
             Engine::MongoDb,
-            "dbdelve_dev",
+            "vernier_dev",
             &scratch.1,
             &[("_id", "2")],
             &[("_id".into(), "long".into())],
@@ -3877,10 +3877,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_writes_report_what_they_did() {
         let connection = live();
-        let scratch = Scratch(&connection, format!("dbdelve_test_{}", ObjectId::new()));
+        let scratch = Scratch(&connection, format!("vernier_test_{}", ObjectId::new()));
         let on = |method: &str| {
             ran(
                 &connection,
@@ -3963,10 +3963,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_an_option_naming_a_field_of_the_command_is_refused_before_it_is_sent() {
         let connection = live();
-        let scratch = Scratch(&connection, format!("dbdelve_test_{}", ObjectId::new()));
+        let scratch = Scratch(&connection, format!("vernier_test_{}", ObjectId::new()));
         let c = format!("db.getCollection('{}')", scratch.1);
         let out = format!(
             "[{{ $match: {{ _id: null }} }}, {{ $out: '{}' }}]",
@@ -4024,12 +4024,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_cancel_stops_the_statement_on_the_server_and_the_session_carries_on() {
         let connection = live();
         let run = CancelToken::default();
         // The statement's own comment, which is not what Cancel finds it by.
-        let comments = [format!("dbdelve-test-{}", ObjectId::new())];
+        let comments = [format!("vernier-test-{}", ObjectId::new())];
         let slow = std::thread::spawn({
             let (connection, run) = (connection.clone(), run.clone());
             let statement = format!("{SLOW}.comment('{}')", comments[0]);
@@ -4066,7 +4066,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_the_statement_timeout_stops_a_statement_on_the_server() {
         let mut config = live_config();
         config.server.statement_timeout = 1;
@@ -4098,7 +4098,7 @@ mod tests {
 
         // A command is the user's to bound, so only the client-side bound
         // stops this one, and it stops it on the server too.
-        let comments = [format!("dbdelve-test-{}", ObjectId::new())];
+        let comments = [format!("vernier-test-{}", ObjectId::new())];
         let command = format!(
             "db.runCommand({{ find: 'events', filter: {{ $where: 'sleep(1000) || false' }}, \
              comment: '{}', maxTimeMS: 60000 }})",
@@ -4136,7 +4136,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_rows_past_the_limit_are_counted_and_a_read_is_stopped_there() {
         let connection = live();
         let counted = connection
@@ -4160,7 +4160,7 @@ mod tests {
         assert_eq!(whole.stopped, None);
 
         // A million documents, which a drain would take seconds over.
-        let comment = format!("dbdelve-test-{}", ObjectId::new());
+        let comment = format!("vernier-test-{}", ObjectId::new());
         let started = Instant::now();
         let stopped = limited(
             &connection,
@@ -4201,10 +4201,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_an_aggregate_that_writes_is_never_stopped_at_the_limit() {
         let connection = live();
-        let scratch = Scratch(&connection, format!("dbdelve_test_{}", ObjectId::new()));
+        let scratch = Scratch(&connection, format!("vernier_test_{}", ObjectId::new()));
         for stage in ["$merge", "$out"] {
             let statement = format!("db.events.aggregate([{{ {stage}: '{}' }}])", scratch.1);
             assert!(!crate::sql::rerunnable(Engine::MongoDb, &statement));
@@ -4215,7 +4215,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_the_development_database_is_fully_seeded() {
         // `wide_metrics` fills last, so a complete one means the whole seed ran.
         let connection = live();
@@ -4234,14 +4234,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_preview_pages_through_a_collection_in_the_order_its_header_asks() {
         let connection = live();
         let by_id = [crate::sql::SortKey::new("\"_id\"", false)];
         let page = |offset| {
             let statement = crate::filter::relation_sql(
                 Engine::MongoDb,
-                "dbdelve_dev",
+                "vernier_dev",
                 "wide_metrics",
                 "",
                 &by_id,
@@ -4263,13 +4263,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_count_counts_what_the_filtered_preview_pages_through() {
         use crate::filter::{FilterBar, Operator, derived_filter};
 
         let connection = live();
         let columns = connection
-            .structure("dbdelve_dev", "accounts")
+            .structure("vernier_dev", "accounts")
             .expect("structure should load")
             .columns;
         let bar = |column: &str, operator, value: &str| FilterBar {
@@ -4280,14 +4280,14 @@ mod tests {
         };
         let counted = |filter: &str| {
             let statement =
-                crate::explorer::count_sql(Engine::MongoDb, "dbdelve_dev", "accounts", filter);
+                crate::explorer::count_sql(Engine::MongoDb, "vernier_dev", "accounts", filter);
             let result = generated(&connection, &statement);
             result.rows[0].get(0).and_then(|n| n.parse::<u64>().ok())
         };
         let previewed = |filter: &str| {
             let statement = crate::explorer::preview_sql(
                 Engine::MongoDb,
-                "dbdelve_dev",
+                "vernier_dev",
                 "accounts",
                 filter,
                 None,
@@ -4333,36 +4333,36 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_the_databases_list_flags_the_one_connected_to() {
         let databases = live().databases().expect("databases should list");
         // The app user holds a role on these two, and listDatabases answers
         // with exactly the ones it holds a role on.
-        assert_eq!(databases.names, ["dbdelve_archive", "dbdelve_dev"]);
-        assert_eq!(databases.current.as_deref(), Some("dbdelve_dev"));
+        assert_eq!(databases.names, ["vernier_archive", "vernier_dev"]);
+        assert_eq!(databases.current.as_deref(), Some("vernier_dev"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_blank_database_is_in_none_and_lists_no_collections() {
         let mut config = live_config();
         config.server.database = String::new();
-        // The user lives in dbdelve_dev, which was its source only by being
+        // The user lives in vernier_dev, which was its source only by being
         // the database the URL named.
-        config.options = "authSource=dbdelve_dev".into();
+        config.options = "authSource=vernier_dev".into();
         let connection = Connection::open(&config).expect("a blank database should connect");
 
         let databases = connection.databases().expect("databases should list");
         assert_eq!(databases.current, None);
-        assert!(databases.names.contains(&"dbdelve_dev".to_string()));
+        assert!(databases.names.contains(&"vernier_dev".to_string()));
         assert_eq!(connection.catalog().unwrap(), Catalog::default());
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_switch_to_a_database_the_user_is_not_defined_in_still_logs_in() {
         let mut config = ConnectionConfig::MongoDb(live_config());
-        config.set_database("dbdelve_archive".into());
+        config.set_database("vernier_archive".into());
         let ConnectionConfig::MongoDb(config) = config else {
             unreachable!()
         };
@@ -4371,7 +4371,7 @@ mod tests {
             .expect("the switched profile should log in")
             .catalog()
             .expect("catalog should load");
-        assert_eq!(catalog.schemas[0].name, "dbdelve_archive");
+        assert_eq!(catalog.schemas[0].name, "vernier_archive");
         assert!(
             catalog.schemas[0]
                 .relations
@@ -4381,13 +4381,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_catalog_round_trip() {
         let catalog = live().catalog().expect("catalog should load");
         let [schema] = catalog.schemas.as_slice() else {
             panic!("one schema, the connected database: {catalog:?}");
         };
-        assert_eq!(schema.name, "dbdelve_dev");
+        assert_eq!(schema.name, "vernier_dev");
         assert!(schema.routines.is_empty());
         let kind = |name: &str| {
             schema
@@ -4418,10 +4418,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_sizes_land_on_collections_and_not_on_views() {
         let sizes = live().sizes().expect("sizes should load");
-        let sizes = &sizes["dbdelve_dev"];
+        let sizes = &sizes["vernier_dev"];
         let events = sizes["events"];
         assert_eq!(events.rows, Some(1_000_000));
         assert!(events.size.is_some_and(|size| size > 0), "{events:?}");
@@ -4431,11 +4431,11 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_structure_round_trip() {
         let connection = live();
         let accounts = connection
-            .structure("dbdelve_dev", "accounts")
+            .structure("vernier_dev", "accounts")
             .expect("structure should load");
         let column = |structure: &Structure, name: &str| {
             structure
@@ -4478,7 +4478,7 @@ mod tests {
             ]
         );
         let events = connection
-            .structure("dbdelve_dev", "events")
+            .structure("vernier_dev", "events")
             .expect("structure should load");
         assert!(
             events
@@ -4490,7 +4490,7 @@ mod tests {
         );
 
         let mixed = connection
-            .structure("dbdelve_dev", "mixed_shapes")
+            .structure("vernier_dev", "mixed_shapes")
             .expect("structure should load");
         assert_eq!(
             column(&mixed, "value"),
@@ -4505,28 +4505,28 @@ mod tests {
         );
 
         let view = connection
-            .structure("dbdelve_dev", "account_overview")
+            .structure("vernier_dev", "account_overview")
             .expect("a view's structure should load");
         assert!(view.row_key().is_empty(), "{:?}", view.constraints);
         assert!(view.indexes.is_empty());
         assert_eq!(column(&view, "_id"), ("string".into(), false));
 
         let readings = connection
-            .structure("dbdelve_dev", "sensor_readings")
+            .structure("vernier_dev", "sensor_readings")
             .expect("a time-series collection's structure should load");
         assert_eq!(readings.row_key(), ["_id"]);
         assert_eq!(column(&readings, "recorded_at"), ("date".into(), false));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_the_ddl_of_a_collection_and_a_view_creates_them_again() {
         let connection = live();
         let accounts = connection
-            .ddl("dbdelve_dev", "accounts")
+            .ddl("vernier_dev", "accounts")
             .expect("the collection's DDL should load");
         let view = connection
-            .ddl("dbdelve_dev", "account_overview")
+            .ddl("vernier_dev", "account_overview")
             .expect("the view's DDL should load");
 
         assert!(
@@ -4552,7 +4552,7 @@ mod tests {
         // A clustered collection whose clustered index has a name of its own,
         // and a partial index over a date and a long: run again, the DDL makes
         // the same collection.
-        let scratch = Scratch(&connection, format!("dbdelve_test_{}", ObjectId::new()));
+        let scratch = Scratch(&connection, format!("vernier_test_{}", ObjectId::new()));
         let collection = format!("db.getCollection('{}')", scratch.1);
         ran(
             &connection,
@@ -4565,12 +4565,12 @@ mod tests {
             ),
         );
         let written = connection
-            .ddl("dbdelve_dev", &scratch.1)
+            .ddl("vernier_dev", &scratch.1)
             .expect("the scratch collection's DDL should load");
         ran(&connection, &format!("{collection}.drop()"));
         ran(&connection, &written);
         assert_eq!(
-            connection.ddl("dbdelve_dev", &scratch.1).as_deref(),
+            connection.ddl("vernier_dev", &scratch.1).as_deref(),
             Ok(written.as_str())
         );
         assert_eq!(written.matches("createIndex").count(), 1, "{written}");
@@ -4582,7 +4582,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_only_the_modes_the_server_can_satisfy_connect() {
         let connect = |sslmode| {
             let mut config = live_config();
@@ -4614,7 +4614,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MONGO_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MONGO_URL"]
     fn live_a_wrong_password_fails_the_connect_in_the_servers_words() {
         let mut config = live_config();
         config.server.password = "not the password".into();
@@ -4629,14 +4629,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and MongoDB configured through dbdelve_SSH_CONFIG and dbdelve_MONGO_URL"]
+    #[ignore = "requires the dev bastions and MongoDB configured through vernier_SSH_CONFIG and vernier_MONGO_URL"]
     fn live_ssh_the_catalog_loads_through_the_bastion() {
         // The compose server as the bastion sees it, by service name and the
         // port inside the network.
         let mut config = live_config();
         config.server.host = "mongo".into();
         config.server.port = Some(27017);
-        config.server.ssh = crate::db::ssh::live_bastion("dbdelve-bastion");
+        config.server.ssh = crate::db::ssh::live_bastion("vernier-bastion");
         let connection = Connection::open(&config).expect("connection should open");
 
         let catalog = connection.catalog().expect("catalog should load");
@@ -4660,7 +4660,7 @@ mod tests {
             ))
             .expect("connection should open"),
             engine: Engine::MongoDb,
-            schema: "dbdelve_dev",
+            schema: "vernier_dev",
             relation: "conformance",
             key: "_id",
             columns: &COLUMNS_BY_ID,
@@ -4692,7 +4692,7 @@ mod tests {
 
     crate::db::conformance::suite!(
         live_conformance,
-        "requires the repository development database configured through dbdelve_MONGO_URL",
+        "requires the repository development database configured through vernier_MONGO_URL",
         conformance_subject:
         connects,
         query_round_trip,

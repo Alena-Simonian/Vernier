@@ -1,17 +1,17 @@
 -- CHECK_POLICY is off because the app password is fixed by the dev seed
 -- convention (matching the Postgres/MySQL containers) and it embeds the
 -- login name, which SQL Server's default complexity policy refuses.
-CREATE LOGIN dbdelve WITH PASSWORD = 'DBDelve_dev1', CHECK_POLICY = OFF;
+CREATE LOGIN vernier WITH PASSWORD = 'Vernier_dev1', CHECK_POLICY = OFF;
 GO
 
-CREATE DATABASE dbdelve_dev;
+CREATE DATABASE vernier_dev;
 GO
 
-USE dbdelve_dev;
+USE vernier_dev;
 GO
 
-CREATE USER dbdelve FOR LOGIN dbdelve;
-ALTER ROLE db_owner ADD MEMBER dbdelve;
+CREATE USER vernier FOR LOGIN vernier;
+ALTER ROLE db_owner ADD MEMBER vernier;
 GO
 
 -- A reference that crosses a schema boundary, so the catalog is forced to
@@ -172,7 +172,7 @@ SELECT
     N'Large values',
     -- REPLICATE truncates at 8000/4000 chars unless the source is cast to
     -- (n)varchar(max) first; the literal alone is typed varchar(n).
-    REPLICATE(CAST(N'DBDelve keeps the complete value while the grid clips visually. ' AS nvarchar(max)), 2048),
+    REPLICATE(CAST(N'Vernier keeps the complete value while the grid clips visually. ' AS nvarchar(max)), 2048),
     -- STRING_AGG's result stays non-LOB (8000-byte cap) unless an argument is
     -- explicitly varchar(max); the concatenated values here are ~4KB.
     N'{"kind":"large","values":[' + STRING_AGG(CONCAT(CAST('{"index":' AS varchar(max)), value, ',"square":', value * value, '}'), ',') WITHIN GROUP (ORDER BY value) + ']}',

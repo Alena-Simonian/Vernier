@@ -35,7 +35,7 @@ use super::{
 ///
 /// Everything after the scheme is the path, less an optional `//`, so
 /// `sqlite:///tmp/a.db` and `sqlite:/tmp/a.db` both name `/tmp/a.db` and
-/// `sqlite:./dev/dbdelve_dev.db` names a relative one. No query string is
+/// `sqlite:./dev/vernier_dev.db` names a relative one. No query string is
 /// honoured: SQLite's own URI parameters would be a second way to say things
 /// the profile already says, and one of them is `mode=rwc`, which would put
 /// back the file creation [`Connection::open`] deliberately refuses.
@@ -170,7 +170,7 @@ impl Connection {
         self.run(sql, true, fetch)
     }
 
-    /// dbdelve's own SQL. Its rows are never editable, so it does not pay for the
+    /// vernier's own SQL. Its rows are never editable, so it does not pay for the
     /// round trip that reads a primary key.
     fn internal_query(&self, sql: &str) -> Result<QueryResult, DbError> {
         self.run(sql, false, Fetch::default())
@@ -195,14 +195,14 @@ impl Connection {
 
         // Whether this submission is the one that opened a transaction, asked
         // before it runs: a transaction the user began in an earlier run is
-        // theirs to finish, not dbdelve's to discard on their next typo.
+        // theirs to finish, not vernier's to discard on their next typo.
         let outside_a_transaction = connection.is_autocommit();
 
         let outcome = (|| -> Result<(), DbError> {
             // SQLite splits the submission itself, using the tail its own
-            // parser reports. dbdelve's tree-sitter grammar could have done it,
+            // parser reports. vernier's tree-sitter grammar could have done it,
             // but then a statement SQLite accepts and the grammar does not
-            // would become a statement dbdelve refuses to send — and what the
+            // would become a statement vernier refuses to send — and what the
             // user types goes to the engine verbatim.
             let mut batch = Batch::new(&connection, sql);
 
@@ -422,7 +422,7 @@ impl<F: Fn(&str) -> Result<QueryResult, DbError>> Schema<F> {
     ///
     /// Empty for a table that declares none. Such a table still has a rowid
     /// that would identify a row, but the rowid is not in the result set unless
-    /// the user selected it, and a predicate dbdelve cannot read off the grid is
+    /// the user selected it, and a predicate vernier cannot read off the grid is
     /// a predicate it must not write.
     fn primary_key(&self, schema: &str, table: &str) -> Result<Vec<String>, DbError> {
         let result = (self.run)(&format!(
@@ -448,7 +448,7 @@ impl<F: Fn(&str) -> Result<QueryResult, DbError>> Schema<F> {
     }
 
     /// SQLite has no stored functions or procedures at all, so an empty list is
-    /// the true answer rather than a gap in what dbdelve can see -- and there is
+    /// the true answer rather than a gap in what vernier can see -- and there is
     /// nothing to ask the file for.
     pub(super) fn routines(&self) -> Result<Catalog, DbError> {
         Ok(Catalog::default())
@@ -1022,8 +1022,8 @@ fn quoted_list(names: &[String]) -> String {
 
 /// A value as text.
 ///
-/// Postgres has the server do this and hands dbdelve the result; here it is
-/// dbdelve's decision, so each one is made to be reversible — what the grid shows
+/// Postgres has the server do this and hands vernier the result; here it is
+/// vernier's decision, so each one is made to be reversible — what the grid shows
 /// is something SQLite would accept back.
 fn render<'a>(
     value: ValueRef<'a>,
@@ -1086,7 +1086,7 @@ fn query_error(error: &rusqlite::Error, submission: &str) -> DbError {
 /// Deliberately no `SQLITE_OPEN_CREATE`. With it, a mistyped path is an empty
 /// database that opens successfully and then reports an empty catalog, which
 /// reads as "this database has nothing in it" rather than "this is not the file
-/// you meant". dbdelve would also have littered a file onto the user's disk to
+/// you meant". vernier would also have littered a file onto the user's disk to
 /// tell them so.
 ///
 /// `SQLITE_OPEN_URI` is off for the same reason: the path came out of the URL
@@ -1108,7 +1108,7 @@ fn open_file(path: &std::path::Path) -> Result<rusqlite::Connection, DbError> {
 
 /// End the transaction a failed batch left open, and say so in the error.
 ///
-/// SQLite stops the batch at the failing statement, so the `COMMIT` dbdelve wrote
+/// SQLite stops the batch at the failing statement, so the `COMMIT` vernier wrote
 /// into the text never runs and the transaction stays open on a connection that
 /// outlives the statement: the refresh that follows reads the uncommitted rows
 /// back as though the apply had succeeded, and the next batch's `BEGIN` fails
@@ -1334,7 +1334,7 @@ SELECT n FROM counting
 
     #[test]
     fn a_read_past_the_limit_is_stopped_and_lets_go_of_the_database() {
-        let path = std::env::temp_dir().join(format!("dbdelve-stopped-{}.db", std::process::id()));
+        let path = std::env::temp_dir().join(format!("vernier-stopped-{}.db", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let writer = rusqlite::Connection::open(&path).expect("the file should open");
         writer.execute_batch(ACCOUNTS).unwrap();
@@ -1408,9 +1408,9 @@ RETURNING n
     }
 
     /// The database the `live_` tests talk to, seeded from
-    /// `dev/sqlite/001-dbdelve-demo.sql`.
+    /// `dev/sqlite/001-vernier-demo.sql`.
     fn live() -> Connection {
-        let path = std::env::var("dbdelve_SQLITE_PATH").expect("dbdelve_SQLITE_PATH is required");
+        let path = std::env::var("vernier_SQLITE_PATH").expect("vernier_SQLITE_PATH is required");
         Connection::open(&path, 0).expect("connection should open")
     }
 
@@ -1478,15 +1478,15 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     #[test]
     fn a_url_names_a_file_however_many_slashes_it_uses() {
         for (url, expected) in [
-            ("sqlite:///tmp/dbdelve.db", "/tmp/dbdelve.db"),
-            ("sqlite:/tmp/dbdelve.db", "/tmp/dbdelve.db"),
-            ("sqlite://./dev/dbdelve_dev.db", "./dev/dbdelve_dev.db"),
-            ("sqlite:./dev/dbdelve_dev.db", "./dev/dbdelve_dev.db"),
-            ("file:///tmp/dbdelve.db", "/tmp/dbdelve.db"),
-            ("sqlite:///tmp/my%20dbdelve.db", "/tmp/my dbdelve.db"),
-            ("sqlite:///C:/Users/me/dbdelve.db", "C:/Users/me/dbdelve.db"),
-            ("sqlite://C:/Users/me/dbdelve.db", "C:/Users/me/dbdelve.db"),
-            ("file:///c:/dbdelve.db", "c:/dbdelve.db"),
+            ("sqlite:///tmp/vernier.db", "/tmp/vernier.db"),
+            ("sqlite:/tmp/vernier.db", "/tmp/vernier.db"),
+            ("sqlite://./dev/vernier_dev.db", "./dev/vernier_dev.db"),
+            ("sqlite:./dev/vernier_dev.db", "./dev/vernier_dev.db"),
+            ("file:///tmp/vernier.db", "/tmp/vernier.db"),
+            ("sqlite:///tmp/my%20vernier.db", "/tmp/my vernier.db"),
+            ("sqlite:///C:/Users/me/vernier.db", "C:/Users/me/vernier.db"),
+            ("sqlite://C:/Users/me/vernier.db", "C:/Users/me/vernier.db"),
+            ("file:///c:/vernier.db", "c:/vernier.db"),
         ] {
             assert_eq!(path_from_url(url).unwrap(), expected, "{url}");
         }
@@ -1508,14 +1508,14 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
 
     #[test]
     fn opening_a_path_that_is_not_there_names_it_and_creates_nothing() {
-        let path = std::env::temp_dir().join("dbdelve-absent-database.db");
+        let path = std::env::temp_dir().join("vernier-absent-database.db");
         let _ = std::fs::remove_file(&path);
 
         let Err(error) = Connection::open(path.to_str().unwrap(), 0) else {
             panic!("opening a path that is not there must fail");
         };
 
-        assert!(error.message.contains("dbdelve-absent-database.db"));
+        assert!(error.message.contains("vernier-absent-database.db"));
         assert!(!path.exists(), "opening must not create the file");
     }
 
@@ -1723,7 +1723,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     #[test]
     fn a_table_without_a_primary_key_is_not_editable() {
         // There is a rowid that would identify the row, but it is not in the
-        // result set, so there is no predicate dbdelve can read off the grid.
+        // result set, so there is no predicate vernier can read off the grid.
         let result = memory("CREATE TABLE unkeyed (value INTEGER, label TEXT); INSERT INTO unkeyed VALUES (1, 'a');")
             .query("SELECT value, label FROM unkeyed", Fetch::default())
             .expect("query should succeed");
@@ -2045,7 +2045,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_the_development_database_is_fully_seeded() {
         // The seed is applied by a tool outside this test suite, and a seed that
         // half-applied still leaves something to connect to -- the MySQL
@@ -2062,7 +2062,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_reads_run_at_once_take_the_time_of_one() {
         super::super::at_once::reads_overlap(
             &super::super::Connection::Sqlite(live()),
@@ -2074,7 +2074,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_a_cancel_stops_every_read_run_at_once() {
         super::super::at_once::a_cancel_stops_them_all(
             &super::super::Connection::Sqlite(live()),
@@ -2084,7 +2084,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_query_round_trip() {
         let result = live()
             .query(
@@ -2099,7 +2099,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_catalog_round_trip() {
         let catalog = live().catalog().expect("catalog should load");
         let main = catalog
@@ -2122,7 +2122,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_structure_round_trip() {
         let structure = live()
             .structure("main", "accounts")
@@ -2149,7 +2149,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_a_single_table_select_is_editable_by_its_primary_key() {
         let edit = live()
             .query("SELECT name, id FROM accounts", Fetch::default())
@@ -2163,7 +2163,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_the_foreign_key_fixtures_are_seeded() {
         // The foreign-key tests have nothing to read unless the reseed that
         // added `orders` and `order_items` has actually been applied. There is
@@ -2180,7 +2180,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_a_single_column_foreign_key_names_its_parent() {
         let structure = live()
             .structure("main", "orders")
@@ -2198,7 +2198,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_a_composite_foreign_key_is_one_entry_per_column_in_key_order() {
         let structure = live()
             .structure("main", "order_items")
@@ -2224,7 +2224,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_SQLITE_PATH"]
+    #[ignore = "requires the repository development database configured through vernier_SQLITE_PATH"]
     fn live_the_rendered_foreign_key_survives_beside_the_structured_one() {
         let structure = live()
             .structure("main", "order_items")
@@ -2244,7 +2244,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
 
     fn conformance_subject() -> crate::db::conformance::Subject {
         use crate::db::conformance::{COLUMNS, Fixture, Subject, sql_find, sql_read};
-        let path = std::env::var("dbdelve_SQLITE_PATH").expect("dbdelve_SQLITE_PATH is required");
+        let path = std::env::var("vernier_SQLITE_PATH").expect("vernier_SQLITE_PATH is required");
         Subject {
             connection: crate::db::Connection::open(crate::db::ConnectionConfig::Sqlite {
                 path,
@@ -2279,7 +2279,7 @@ CREATE TRIGGER accounts_touch AFTER INSERT ON Accounts BEGIN SELECT 1; END;"
 
     crate::db::conformance::suite!(
         live_conformance,
-        "requires the SQLite development database configured through dbdelve_SQLITE_PATH",
+        "requires the SQLite development database configured through vernier_SQLITE_PATH",
         conformance_subject:
         connects,
         query_round_trip,

@@ -1361,7 +1361,7 @@ fn fs_surface(input: SurfaceVarying) -> @location(0) vec4<f32> {
     return ycbcr_to_RGB * y_cb_cr;
 }
 
-// dbdelve patch: backdrop blur, ported from zui (zeronsh/zui@361ff20) unchanged.
+// vernier patch: backdrop blur, ported from zui (zeronsh/zui@361ff20) unchanged.
 // ---------------------------------------------------------------------------
 // Backdrop blur (Linux/wgpu port of the macOS Metal frosted-glass path).
 //

@@ -11,7 +11,7 @@ use crate::db::{EditTarget, Engine, ExplainMode, RelationKind, Row, SshTunnel};
 const PROFILES_FILE: &str = "profiles.toml";
 /// The release variant's name. Both the support directory and the keychain
 /// service are this, so [`variant_name`] is the only thing that may widen it.
-const NAME: &str = "dbdelve";
+const NAME: &str = "vernier";
 /// The buffer file a build before per-tab buffers wrote. Read-only now, and
 /// only for tab 0 -- see [`read_scratch`].
 const LEGACY_SCRATCH_FILE: &str = ".scratch.sql";
@@ -43,7 +43,7 @@ pub struct StoredProfile {
     pub port: Option<u16>,
     pub database: String,
     pub user: String,
-    /// libpq's spelling, so a profile file stays readable and a mode dbdelve
+    /// libpq's spelling, so a profile file stays readable and a mode vernier
     /// stops supporting reads back as a name rather than a number. Defaulted,
     /// so profiles written before TLS existed load as `prefer` — which is what
     /// they were connecting as.
@@ -294,7 +294,7 @@ pub struct StoredGrid {
     /// snapshot from before it was kept, which takes the Settings default.
     #[serde(default)]
     pub limit: Option<usize>,
-    /// The relation tab's filter, so reopening dbdelve lands on the rows that
+    /// The relation tab's filter, so reopening vernier lands on the rows that
     /// were being read rather than on the whole table. Kept for the same reason
     /// [`Self::order_by`] is, and unlike the page offset, which is not part of
     /// what a tab is showing.
@@ -346,7 +346,7 @@ pub struct StoredPlan {
 }
 
 /// The three font families in use. App-level rather than per-profile: the face
-/// dbdelve is read in belongs to the person reading, not to the database they
+/// vernier is read in belongs to the person reading, not to the database they
 /// happen to be connected to. Every field is optional, so a file written before
 /// fonts were pickable reads back as the defaults -- which is what it was drawn
 /// in.
@@ -540,7 +540,7 @@ pub struct LoadFailure {
 /// reported, an unreachable data directory included -- `save_profiles` refuses
 /// on that too, and an empty list here is what the next save writes back.
 pub fn load_profiles() -> Result<ProfileList, LoadFailure> {
-    let path = dbdelve_directory()
+    let path = vernier_directory()
         .map_err(|message| LoadFailure {
             message,
             moved_aside: false,
@@ -565,7 +565,7 @@ pub fn load_profiles() -> Result<ProfileList, LoadFailure> {
         Err(rename_error) => LoadFailure {
             message: format!(
                 "Could not read {}{what}, and it could not be moved aside ({rename_error}), \
-                 so nothing will be saved until dbdelve is restarted: {error}",
+                 so nothing will be saved until vernier is restarted: {error}",
                 path.display()
             ),
             moved_aside: false,
@@ -576,7 +576,7 @@ pub fn load_profiles() -> Result<ProfileList, LoadFailure> {
 /// The profile file without `load_profiles`' moving it aside on a failure,
 /// for a read that only peeks, ahead of the one that reports.
 pub fn peek_profiles() -> Option<ProfileList> {
-    read_profiles(&dbdelve_directory().ok()?.join(PROFILES_FILE)).ok()
+    read_profiles(&vernier_directory().ok()?.join(PROFILES_FILE)).ok()
 }
 
 /// A failure is what could not be read -- `" as TOML"` for a file that could
@@ -875,7 +875,7 @@ fn interleaved<'a>(
 
 pub fn save_profiles(list: &ProfileList) -> Result<(), String> {
     write_file(
-        &dbdelve_directory()?.join(PROFILES_FILE),
+        &vernier_directory()?.join(PROFILES_FILE),
         &encode_profiles(list)?,
     )
 }
@@ -1342,7 +1342,7 @@ pub(crate) fn unsafe_component(value: &str) -> Option<&'static str> {
     }
 }
 
-/// `dbdelve` unset or empty, `dbdelve-<variant>` otherwise.
+/// `vernier` unset or empty, `vernier-<variant>` otherwise.
 ///
 /// The support directory and the keychain service both come from here, and
 /// they have to move together: a dev build that suffixed only one of them
@@ -1350,14 +1350,14 @@ pub(crate) fn unsafe_component(value: &str) -> Option<&'static str> {
 /// A variant that cannot be a path component is an error rather than a
 /// fallback to the release name, for the same reason.
 fn variant_name() -> Result<String, String> {
-    let Some(variant) = std::env::var("DBDELVE_VARIANT")
+    let Some(variant) = std::env::var("VERNIER_VARIANT")
         .ok()
         .filter(|variant| !variant.is_empty())
     else {
         return Ok(NAME.to_string());
     };
     if let Some(reason) = unsafe_component(&variant) {
-        return Err(format!("DBDELVE_VARIANT {reason}."));
+        return Err(format!("VERNIER_VARIANT {reason}."));
     }
     Ok(format!("{NAME}-{variant}"))
 }
@@ -1365,7 +1365,7 @@ fn variant_name() -> Result<String, String> {
 /// macOS keeps Application Support, where every install before this already
 /// has its data. Linux follows the XDG base directory spec. Windows uses the
 /// roaming profile, which follows the user the way Application Support does.
-fn dbdelve_directory() -> Result<PathBuf, String> {
+fn vernier_directory() -> Result<PathBuf, String> {
     Ok(data_root()?.join(variant_name()?))
 }
 
@@ -1427,7 +1427,7 @@ fn query_directory(profile_id: &str) -> Result<PathBuf, String> {
     if let Some(reason) = unsafe_component(profile_id) {
         return Err(format!("Profile id {reason}."));
     }
-    Ok(dbdelve_directory()?.join("queries").join(profile_id))
+    Ok(vernier_directory()?.join("queries").join(profile_id))
 }
 
 fn scratch_file(tab: u64) -> String {
@@ -1443,7 +1443,7 @@ fn grids_directory(profile_id: &str) -> Result<PathBuf, String> {
     if let Some(reason) = unsafe_component(profile_id) {
         return Err(format!("Profile id {reason}."));
     }
-    Ok(dbdelve_directory()?.join("grids").join(profile_id))
+    Ok(vernier_directory()?.join("grids").join(profile_id))
 }
 
 fn grid_path(profile_id: &str, key: &str) -> Result<PathBuf, String> {
@@ -1570,7 +1570,7 @@ fn rename_query(from: &Path, to: &Path) -> io::Result<()> {
 /// Where the theme files a user drops in, and the themes imported from other
 /// apps, are read from at startup.
 pub(crate) fn theme_directory() -> Result<PathBuf, String> {
-    Ok(dbdelve_directory()?.join("themes"))
+    Ok(vernier_directory()?.join("themes"))
 }
 
 /// Zed's own themes directory, as Zed's `paths::themes_dir` places it. On
@@ -1614,7 +1614,7 @@ pub(crate) fn zed_extension_directory() -> Result<PathBuf, String> {
 /// Where a private key another client kept in its own store is written, since
 /// ssh reads a key only from a file.
 pub(crate) fn ssh_key_directory() -> Result<PathBuf, String> {
-    Ok(dbdelve_directory()?.join("ssh-keys"))
+    Ok(vernier_directory()?.join("ssh-keys"))
 }
 
 /// Replaces `path` whole, so importing again rewrites the same file. The
@@ -2011,7 +2011,7 @@ id = 0
                  {}\n[[profiles]]\nid = 'b'\nname = 'B'\nhost = ''\ndatabase = ''\nuser = ''\nengine = 'sqlite'\npath = '/b.db'\n",
                 PLUGIN.replace("[[profiles]]\nid = \"ch\"", "[[profiles]]\nid = \"x\"")
             );
-            let path = dbdelve_directory().unwrap().join(PROFILES_FILE);
+            let path = vernier_directory().unwrap().join(PROFILES_FILE);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(&path, &text).unwrap();
 
@@ -2258,14 +2258,14 @@ id = 0
 
     /// `HOME` is process-wide and the tests run in threads, so the ones that
     /// touch the disk take turns and each gets its own directory to be the
-    /// whole of dbdelve's storage for the length of the test. Windows reads
+    /// whole of vernier's storage for the length of the test. Windows reads
     /// `APPDATA` instead, so that is pointed at the same temporary root.
     pub(crate) fn with_home<T>(body: impl FnOnce() -> T) -> T {
         static LOCK: std::sync::Mutex<u32> = std::sync::Mutex::new(0);
 
         let mut counter = LOCK.lock().unwrap_or_else(|error| error.into_inner());
         *counter += 1;
-        let home = std::env::temp_dir().join(format!("dbdelve-store-test-{}", *counter));
+        let home = std::env::temp_dir().join(format!("vernier-store-test-{}", *counter));
         let _ = fs::remove_dir_all(&home);
         fs::create_dir_all(&home).expect("the test home must be creatable");
 
@@ -2313,7 +2313,7 @@ id = 0
         outcome
     }
 
-    /// What `dbdelve_directory` appends to the home the test set, which is
+    /// What `vernier_directory` appends to the home the test set, which is
     /// the platform's data directory and not one fixed path.
     fn data_path(variant: &str) -> PathBuf {
         #[cfg(target_os = "macos")]
@@ -2345,7 +2345,7 @@ host = "localhost"
 database = "postgres"
 user = "shayan"
 "#;
-            let path = dbdelve_directory().unwrap().join(PROFILES_FILE);
+            let path = vernier_directory().unwrap().join(PROFILES_FILE);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(&path, toml).unwrap();
 
@@ -2382,7 +2382,7 @@ host = "localhost"
 database = "postgres"
 user = "shayan"
 "#;
-            let path = dbdelve_directory().unwrap().join(PROFILES_FILE);
+            let path = vernier_directory().unwrap().join(PROFILES_FILE);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             fs::write(&path, toml).unwrap();
 
@@ -2403,8 +2403,8 @@ user = "shayan"
                 name: "Dev".into(),
                 host: "127.0.0.1".into(),
                 port: Some(5432),
-                database: "dbdelve_dev".into(),
-                user: "dbdelve".into(),
+                database: "vernier_dev".into(),
+                user: "vernier".into(),
                 sslmode: Some("verify-full".into()),
                 root_certificate: None,
                 engine: Some("postgres".into()),
@@ -2453,8 +2453,8 @@ user = "shayan"
             name: "Dev".into(),
             host: "127.0.0.1".into(),
             port: Some(5432),
-            database: "dbdelve_dev".into(),
-            user: "dbdelve".into(),
+            database: "vernier_dev".into(),
+            user: "vernier".into(),
             sslmode: Some("verify-full".into()),
             root_certificate: Some("/etc/ssl/rds.pem".into()),
             engine: Some("postgres".into()),
@@ -2538,7 +2538,7 @@ user = "shayan"
     #[test]
     fn a_profile_written_before_a_field_existed_still_loads() {
         // Every field added after the first release is `serde(default)`, and this
-        // is the file already on disk for anyone who has run dbdelve before. A
+        // is the file already on disk for anyone who has run vernier before. A
         // decode error here reads as "no profiles", which is what the next save
         // would then write back.
         let ProfileList {
@@ -2546,12 +2546,12 @@ user = "shayan"
         } = decode_profiles(
             "\
 [[profiles]]
-id = \"dbdelve-dev\"
-name = \"dbdelve_dev\"
+id = \"vernier-dev\"
+name = \"vernier_dev\"
 host = \"127.0.0.1\"
 port = 55432
-database = \"dbdelve_dev\"
-user = \"dbdelve\"
+database = \"vernier_dev\"
+user = \"vernier\"
 sslmode = \"prefer\"
 open_objects = []
 ",
@@ -2581,8 +2581,8 @@ open_objects = []
             name: "Dev".into(),
             host: "127.0.0.1".into(),
             port: Some(5432),
-            database: "dbdelve_dev".into(),
-            user: "dbdelve".into(),
+            database: "vernier_dev".into(),
+            user: "vernier".into(),
             sslmode: None,
             root_certificate: None,
             engine: Some("postgres".into()),
@@ -2612,10 +2612,10 @@ open_objects = []
     fn an_ssh_tunnel_with_every_field_survives_the_round_trip_through_toml() {
         let profile = StoredProfile {
             ssh: Some(SshTunnel {
-                host: "dbdelve-bastion".into(),
+                host: "vernier-bastion".into(),
                 port: Some(2222),
                 user: "tunnel".into(),
-                identity_file: Some("/home/dbdelve/.ssh/id_ed25519".into()),
+                identity_file: Some("/home/vernier/.ssh/id_ed25519".into()),
             }),
             ..a_stored_profile()
         };
@@ -2637,7 +2637,7 @@ open_objects = []
     fn an_ssh_tunnel_with_only_a_host_survives_the_round_trip_through_toml() {
         let profile = StoredProfile {
             ssh: Some(SshTunnel {
-                host: "dbdelve-bastion".into(),
+                host: "vernier-bastion".into(),
                 port: None,
                 user: String::new(),
                 identity_file: None,
@@ -2663,7 +2663,7 @@ open_objects = []
         let profile = StoredProfile {
             schema: Some(r#"Sales "EU""#.into()),
             ssh: Some(SshTunnel {
-                host: "dbdelve-bastion".into(),
+                host: "vernier-bastion".into(),
                 ..SshTunnel::default()
             }),
             ..a_stored_profile()
@@ -2706,8 +2706,8 @@ open_objects = []
             name: "Dev".into(),
             host: "127.0.0.1".into(),
             port: Some(5432),
-            database: "dbdelve_dev".into(),
-            user: "dbdelve".into(),
+            database: "vernier_dev".into(),
+            user: "vernier".into(),
             sslmode: None,
             root_certificate: None,
             engine: Some("postgres".into()),
@@ -2765,7 +2765,7 @@ open_objects = []
     }
 
     #[test]
-    fn a_slug_dbdelve_cannot_read_is_no_colour() {
+    fn a_slug_vernier_cannot_read_is_no_colour() {
         assert_eq!(ConnectionColor::from_slug("chartreuse"), None);
         assert_eq!(ConnectionColor::from_slug(""), None);
     }
@@ -2785,7 +2785,7 @@ open_objects = []
             sslmode: None,
             root_certificate: None,
             engine: Some("sqlite".into()),
-            path: Some("/Users/dev/dbdelve_dev.db".into()),
+            path: Some("/Users/dev/vernier_dev.db".into()),
             account: None,
             private_key: None,
             warehouse: None,
@@ -2886,11 +2886,11 @@ open_objects = []
         let ProfileList { profiles, .. } = decode_profiles(
             "\
 [[profiles]]
-id = \"dbdelve-dev\"
-name = \"dbdelve_dev\"
+id = \"vernier-dev\"
+name = \"vernier_dev\"
 host = \"127.0.0.1\"
-database = \"dbdelve_dev\"
-user = \"dbdelve\"
+database = \"vernier_dev\"
+user = \"vernier\"
 
 [[profiles.open_objects]]
 schema = \"public\"
@@ -2918,12 +2918,12 @@ active = true
         let ProfileList { profiles, .. } = decode_profiles(
             "\
 [[profiles]]
-id = \"dbdelve-dev\"
-name = \"dbdelve_dev\"
+id = \"vernier-dev\"
+name = \"vernier_dev\"
 host = \"127.0.0.1\"
 port = 55432
-database = \"dbdelve_dev\"
-user = \"dbdelve\"
+database = \"vernier_dev\"
+user = \"vernier\"
 sslmode = \"prefer\"
 open_objects = []
 ",
@@ -3068,7 +3068,7 @@ open_objects = []
                     host: "localhost".into(),
                     port: Some(5432),
                     database: "dev".into(),
-                    user: "dbdelve".into(),
+                    user: "vernier".into(),
                     sslmode: Some("prefer".into()),
                     root_certificate: None,
                     engine: Some("postgres".into()),
@@ -3133,7 +3133,7 @@ open_objects = []
         );
 
         // A file written before `settings` existed has no `[settings]` table
-        // at all, and that is what is on disk for everyone running dbdelve
+        // at all, and that is what is on disk for everyone running vernier
         // today -- it has to keep reading as `None`, not as the defaults.
         let missing = decode_profiles("active = \"dev\"\n")
             .expect("a file predating settings must load")
@@ -3184,8 +3184,8 @@ open_objects = []
     }
 
     /// Inside `with_home` for its lock rather than for its directory:
-    /// `DBDELVE_VARIANT` is process-wide too, and every other test here reads
-    /// it through `dbdelve_directory`.
+    /// `VERNIER_VARIANT` is process-wide too, and every other test here reads
+    /// it through `vernier_directory`.
     #[test]
     fn the_variant_moves_the_directory_and_the_keychain_together() {
         with_home(|| {
@@ -3193,29 +3193,29 @@ open_objects = []
             // this body is what makes the writes single-threaded.
             let variant = |value: Option<&str>| unsafe {
                 match value {
-                    Some(value) => std::env::set_var("DBDELVE_VARIANT", value),
-                    None => std::env::remove_var("DBDELVE_VARIANT"),
+                    Some(value) => std::env::set_var("VERNIER_VARIANT", value),
+                    None => std::env::remove_var("VERNIER_VARIANT"),
                 }
             };
 
             for unset in [None, Some("")] {
                 variant(unset);
-                assert_eq!(variant_name().unwrap(), "dbdelve");
-                let directory = dbdelve_directory().unwrap();
-                assert!(directory.ends_with(data_path("dbdelve")));
+                assert_eq!(variant_name().unwrap(), "vernier");
+                let directory = vernier_directory().unwrap();
+                assert!(directory.ends_with(data_path("vernier")));
             }
 
             variant(Some("dev"));
-            assert_eq!(variant_name().unwrap(), "dbdelve-dev");
-            let directory = dbdelve_directory().unwrap();
-            assert!(directory.ends_with(data_path("dbdelve-dev")));
+            assert_eq!(variant_name().unwrap(), "vernier-dev");
+            let directory = vernier_directory().unwrap();
+            assert!(directory.ends_with(data_path("vernier-dev")));
 
             // No NUL case: `set_var` panics on one before the code under test
             // ever sees it.
             for rejected in ["../release", "a/b", "a\\b", ".dev", "   "] {
                 variant(Some(rejected));
                 assert!(variant_name().is_err(), "{rejected:?}");
-                assert!(dbdelve_directory().is_err(), "{rejected:?}");
+                assert!(vernier_directory().is_err(), "{rejected:?}");
             }
 
             variant(None);
@@ -3289,7 +3289,7 @@ open_objects = []
         // Profiles, saved queries and the scratch buffer all hold connection
         // settings and go through this one function, so this is the one place
         // that has to prove the permission rather than every caller.
-        let path = std::env::temp_dir().join("dbdelve-store-permissions-test.toml");
+        let path = std::env::temp_dir().join("vernier-store-permissions-test.toml");
         let _ = fs::remove_file(&path);
 
         write_file(&path, "host = \"example\"").expect("file must write");
@@ -3304,7 +3304,7 @@ open_objects = []
     #[test]
     fn a_private_key_is_rewritten_in_place_with_a_final_newline() {
         let directory = std::env::temp_dir().join(format!(
-            "dbdelve-store-key-test-{}/ssh-keys",
+            "vernier-store-key-test-{}/ssh-keys",
             std::process::id()
         ));
         let path = directory.join("tableplus-a");
@@ -3331,7 +3331,7 @@ open_objects = []
         assert_eq!((modes.0.ok(), modes.1.ok()), (Some(0o700), Some(0o600)));
 
         let path = std::env::temp_dir().join(format!(
-            "dbdelve-store-newline-test-{}/key",
+            "vernier-store-newline-test-{}/key",
             std::process::id()
         ));
         let written = write_private_key(&path, b"key").and_then(|()| fs::read(&path));
@@ -3584,17 +3584,17 @@ open_objects = []
 
     #[test]
     fn a_profile_written_before_open_queries_existed_keeps_its_open_query() {
-        // The file on disk for anyone running dbdelve today: one buffer, named in
+        // The file on disk for anyone running vernier today: one buffer, named in
         // `open_query`. Dropping either the field or the decode loses it.
         let ProfileList { profiles, .. } = decode_profiles(
             "\
 [[profiles]]
-id = \"dbdelve-dev\"
-name = \"dbdelve_dev\"
+id = \"vernier-dev\"
+name = \"vernier_dev\"
 host = \"127.0.0.1\"
 port = 55432
-database = \"dbdelve_dev\"
-user = \"dbdelve\"
+database = \"vernier_dev\"
+user = \"vernier\"
 sslmode = \"prefer\"
 open_query = \"daily\"
 open_objects = []
@@ -3618,8 +3618,8 @@ open_objects = []
             name: "Dev".into(),
             host: "127.0.0.1".into(),
             port: Some(5432),
-            database: "dbdelve_dev".into(),
-            user: "dbdelve".into(),
+            database: "vernier_dev".into(),
+            user: "vernier".into(),
             sslmode: None,
             root_certificate: None,
             engine: Some("postgres".into()),
@@ -3915,12 +3915,12 @@ open_objects = []
         let ProfileList { profiles, .. } = decode_profiles(
             "\
 [[profiles]]
-id = \"dbdelve-dev\"
-name = \"dbdelve_dev\"
+id = \"vernier-dev\"
+name = \"vernier_dev\"
 host = \"127.0.0.1\"
 port = 55432
-database = \"dbdelve_dev\"
-user = \"dbdelve\"
+database = \"vernier_dev\"
+user = \"vernier\"
 
 [[profiles.open_objects]]
 schema = \"public\"
@@ -3977,8 +3977,8 @@ name = \"accounts\"
             name: "Dev".into(),
             host: "127.0.0.1".into(),
             port: Some(5432),
-            database: "dbdelve_dev".into(),
-            user: "dbdelve".into(),
+            database: "vernier_dev".into(),
+            user: "vernier".into(),
             sslmode: None,
             root_certificate: None,
             engine: Some("postgres".into()),
@@ -4087,8 +4087,8 @@ name = \"accounts\"
             name: "Dev".into(),
             host: "127.0.0.1".into(),
             port: Some(5432),
-            database: "dbdelve_dev".into(),
-            user: "dbdelve".into(),
+            database: "vernier_dev".into(),
+            user: "vernier".into(),
             sslmode: None,
             root_certificate: None,
             engine: Some("postgres".into()),

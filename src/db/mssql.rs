@@ -350,7 +350,7 @@ ORDER BY source_schema, source_table, f.name, fc.constraint_column_id
 ";
 
 // An inner join on the primary index is what makes a table without one return
-// nothing, which is the same answer as a table DBDelve cannot identify rows in.
+// nothing, which is the same answer as a table Vernier cannot identify rows in.
 const PRIMARY_KEY_SQL: &str = "
 SELECT c.name AS column_name
 FROM sys.indexes AS i
@@ -389,7 +389,7 @@ const CONNECT_TIMEOUT_SECONDS: u64 = 10;
 /// The port the server listens on when the profile does not say.
 pub(super) const DEFAULT_PORT: u16 = 1433;
 
-/// What every statement dbdelve writes assumes of the session, and what a
+/// What every statement vernier writes assumes of the session, and what a
 /// user's `SET` can change under it: `XACT_ABORT` is what makes a bracketed
 /// batch all-or-nothing, the quoting reads differently without the next four,
 /// and `ROWCOUNT` would cut a preview short. `DATEFORMAT` is belt and braces:
@@ -428,7 +428,7 @@ LEFT JOIN sys.dm_exec_describe_first_result_set({statement}, NULL, 0) AS d
 ORDER BY d.column_ordinal
 ";
 
-/// A `mssql://` or `sqlserver://` URL, read by dbdelve. tiberius parses only
+/// A `mssql://` or `sqlserver://` URL, read by vernier. tiberius parses only
 /// ADO.NET and JDBC strings, neither of which is a URL.
 pub fn config_from_url(url: &str) -> Result<ServerConfig, String> {
     super::server_from_url(url, "SQL Server")
@@ -436,7 +436,7 @@ pub fn config_from_url(url: &str) -> Result<ServerConfig, String> {
 
 type Tds = Client<Compat<TcpStream>>;
 
-/// dbdelve's five rungs as tiberius's two settings.
+/// vernier's five rungs as tiberius's two settings.
 ///
 /// tiberius builds its own rustls configuration and offers three trusts:
 /// none at all, the platform store, or one named certificate. Neither of the
@@ -457,7 +457,7 @@ fn config(server: &ServerConfig, encryption: EncryptionLevel) -> Config {
     if !server.database.is_empty() {
         config.database(&server.database);
     }
-    config.application_name("DBDelve");
+    config.application_name("Vernier");
     // Sent as typed, blank included: cloud IAM issues a token or nothing.
     config.authentication(AuthMethod::sql_server(&server.user, &server.password));
     config.encryption(encryption);
@@ -486,7 +486,7 @@ pub(crate) const CANCELLED: &str =
     "Cancelled: the statement was stopped by closing its connection.";
 
 /// Why a session was closed after a capped read.
-const UNCAPPED: &str = "dbdelve could not take back the SET ROWCOUNT the row limit sent ahead of \
+const UNCAPPED: &str = "Vernier could not take back the SET ROWCOUNT the row limit sent ahead of \
      it, so the session was closed rather than left capping every statement after it.";
 
 /// The largest row limit `SET ROWCOUNT` can carry one past: it takes an
@@ -678,10 +678,10 @@ impl tracing::field::Visit for Message {
 enum Origin {
     /// Typed by the user: run as typed, under whatever the user has `SET`.
     User,
-    /// Written by dbdelve at the user's ask, a relation tab's preview or an
+    /// Written by vernier at the user's ask, a relation tab's preview or an
     /// edit: run under [`SESSION_OPTIONS`], and cancellable.
     Generated,
-    /// dbdelve's catalog and structure queries: under [`SESSION_OPTIONS`],
+    /// vernier's catalog and structure queries: under [`SESSION_OPTIONS`],
     /// never editable, and not what Cancel is for.
     Internal,
 }
@@ -849,13 +849,13 @@ impl Connection {
         self.run(sql, Origin::User, fetch)
     }
 
-    /// A statement dbdelve wrote at the user's ask, run under the session
+    /// A statement vernier wrote at the user's ask, run under the session
     /// options it was written for.
     pub fn generated(&self, sql: &str, fetch: Fetch) -> Result<QueryResult, DbError> {
         self.run(sql, Origin::Generated, fetch)
     }
 
-    /// dbdelve's own SQL. Its rows are never editable, so it does not pay for
+    /// vernier's own SQL. Its rows are never editable, so it does not pay for
     /// the describe that would say where they came from.
     fn internal_query(&self, sql: &str) -> Result<QueryResult, DbError> {
         self.run(sql, Origin::Internal, Fetch::default())
@@ -906,7 +906,7 @@ impl Connection {
         let limit = self.server.statement_timeout;
         let lost = session.lost.take();
         if stopped || lost.is_some() {
-            // The server has no statement timeout, so the timer is dbdelve's,
+            // The server has no statement timeout, so the timer is vernier's,
             // and what it stops has to be stopped the way Cancel stops it.
             let what = match (ran, lost) {
                 (None, Some(Lost::TimedOut)) => format!(
@@ -916,12 +916,12 @@ impl Connection {
                 (None, Some(Lost::Panicked(message))) => message,
                 (None, Some(Lost::Capped)) => UNCAPPED.into(),
                 (None, None) => CANCELLED.into(),
-                // What dbdelve asks after the statement is what was stopped,
+                // What vernier asks after the statement is what was stopped,
                 // and the statement's own work stands.
                 (Some(ran), lost) => {
                     let after = match lost {
                         Some(Lost::TimedOut) => format!(
-                            "a query dbdelve sends after it ran past the {limit}-second statement \
+                            "a query vernier sends after it ran past the {limit}-second statement \
                              timeout."
                         ),
                         Some(Lost::Panicked(message)) => format!("then {message}"),
@@ -1142,7 +1142,7 @@ impl Connection {
         let reconnected = match self.connect() {
             Ok(fresh) => {
                 *session = Some(fresh);
-                "dbdelve reconnected.".to_string()
+                "Vernier reconnected.".to_string()
             }
             Err(error) => format!("Reconnecting failed: {}", error.message),
         };
@@ -1323,7 +1323,7 @@ async fn login(
                 other => other?,
             };
             // A session default, like the other engines' statement timeouts,
-            // for the user's statements; dbdelve's own assert it again, since
+            // for the user's statements; vernier's own assert it again, since
             // the user can `SET` it off (see `transaction_outcome`).
             client
                 .simple_query("SET XACT_ABORT ON")
@@ -1359,7 +1359,7 @@ struct Ran {
     probed: Vec<ProbedColumn>,
 }
 
-/// A column of a result dbdelve asked for, by name, null or absent alike.
+/// A column of a result vernier asked for, by name, null or absent alike.
 fn named<'a>(result: &QueryResult, row: &'a Row, name: &str) -> Option<&'a str> {
     let index = result
         .columns
@@ -1368,7 +1368,7 @@ fn named<'a>(result: &QueryResult, row: &'a Row, name: &str) -> Option<&'a str> 
     row.get(index)
 }
 
-/// dbdelve's own SQL, run inside `sp_executesql` behind [`SESSION_OPTIONS`]: a
+/// vernier's own SQL, run inside `sp_executesql` behind [`SESSION_OPTIONS`]: a
 /// `SET` there lasts until the dynamic batch returns, so whatever the user set
 /// is theirs again for their next statement.
 fn scoped(sql: &str) -> String {
@@ -1382,7 +1382,7 @@ fn scoped_under(options: &str, sql: &str) -> String {
     )
 }
 
-/// A question dbdelve asks about a statement, compiling it under the options
+/// A question vernier asks about a statement, compiling it under the options
 /// that statement runs under: a user's own, where `SET QUOTED_IDENTIFIER OFF`
 /// makes `"position"` a string rather than a column.
 fn describing(sql: &str, origin: Origin) -> String {
@@ -2087,7 +2087,7 @@ fn describe(error: &tiberius::error::Error) -> String {
 
 /// A profile is bound to one database, as on Postgres, and T-SQL is the one
 /// dialect here where a statement can move the session to another: the explorer
-/// and every statement dbdelve writes name objects by schema alone, so after a
+/// and every statement vernier writes name objects by schema alone, so after a
 /// `USE` a generated `DELETE` would find the same name in the wrong database.
 /// So the session is moved back, and the run reports it.
 ///
@@ -2142,8 +2142,8 @@ fn held_to_database(session: &mut Session, database: &str) -> Result<(), DbError
     }
     ask(session, &format!("USE [{}]", database.replace(']', "]]")))?;
     Err(plain_error(format!(
-        "The statement moved the session to database {current}, and dbdelve moved it back to \
-         {database}: this connection's explorer, and every statement dbdelve writes, name \
+        "The statement moved the session to database {current}, and vernier moved it back to \
+         {database}: this connection's explorer, and every statement vernier writes, name \
          {database}'s objects."
     )))
 }
@@ -2152,7 +2152,7 @@ fn held_to_database(session: &mut Session, database: &str) -> Result<(), DbError
 ///
 /// `SET XACT_ABORT ON` is what makes a generated batch's brackets atomic:
 /// without it a constraint violation ends only its own statement, the batch
-/// carries on, and the `COMMIT` dbdelve wrote commits the rows before it. It is
+/// carries on, and the `COMMIT` vernier wrote commits the rows before it. It is
 /// the session's default too, so a failing statement of the user's ends a
 /// transaction they began earlier. T-SQL has no nested transactions, so either
 /// takes every open level with it -- which the counts before and after tell.
@@ -2172,7 +2172,7 @@ fn transaction_outcome(
     else {
         return error;
     };
-    // Only a batch dbdelve wrote is known to end at its own `COMMIT`.
+    // Only a batch vernier wrote is known to end at its own `COMMIT`.
     let bracketed = origin == Origin::Generated
         && Engine::SqlServer.transaction_start().is_some_and(|start| {
             sql.trim_start()
@@ -2231,13 +2231,13 @@ mod tests {
     use tiberius::numeric::Numeric;
     use tiberius::time::{Date, DateTime, DateTimeOffset, SmallDateTime};
 
-    /// The server the `live_` tests talk to, from `dbdelve_MSSQL_URL`.
+    /// The server the `live_` tests talk to, from `vernier_MSSQL_URL`.
     fn live_config() -> ServerConfig {
-        let url = std::env::var("dbdelve_MSSQL_URL").expect("dbdelve_MSSQL_URL is required");
+        let url = std::env::var("vernier_MSSQL_URL").expect("vernier_MSSQL_URL is required");
         // The URL's own `sslmode`, `prefer` when it names none: the compose
         // server speaks TLS with a certificate signed by nobody, which `prefer`
         // encrypts to without checking.
-        config_from_url(&url).expect("dbdelve_MSSQL_URL should parse")
+        config_from_url(&url).expect("vernier_MSSQL_URL should parse")
     }
 
     fn live() -> Connection {
@@ -2250,7 +2250,7 @@ mod tests {
         ServerConfig {
             host: "mssql".into(),
             port: Some(1433),
-            ssh: crate::db::ssh::live_bastion("dbdelve-bastion"),
+            ssh: crate::db::ssh::live_bastion("vernier-bastion"),
             ..live_config()
         }
     }
@@ -2280,7 +2280,7 @@ mod tests {
             .iter()
             .map(|(table, column)| ProbedColumn {
                 name: column.unwrap_or("?").to_string(),
-                table: table.map(|table| ("dbdelve_dev".into(), "dbo".into(), table.into())),
+                table: table.map(|table| ("vernier_dev".into(), "dbo".into(), table.into())),
                 column: column.map(str::to_string),
                 local: true,
                 writable: true,
@@ -2291,14 +2291,14 @@ mod tests {
     #[test]
     fn a_url_fills_the_fields_without_inventing_a_port() {
         let config =
-            config_from_url("mssql://person%40example.com:pa%20ss@db.example.test/dbdelve_test")
+            config_from_url("mssql://person%40example.com:pa%20ss@db.example.test/vernier_test")
                 .unwrap();
         assert_eq!(
             config,
             ServerConfig {
                 host: "db.example.test".into(),
                 port: None,
-                database: "dbdelve_test".into(),
+                database: "vernier_test".into(),
                 user: "person@example.com".into(),
                 password: "pa ss".into(),
                 sslmode: SslMode::default(),
@@ -2680,7 +2680,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and SQL Server configured through dbdelve_SSH_CONFIG and dbdelve_MSSQL_URL"]
+    #[ignore = "requires the dev bastions and SQL Server configured through vernier_SSH_CONFIG and vernier_MSSQL_URL"]
     fn live_ssh_a_query_runs_through_the_bastion_and_after_a_reconnect() {
         let connection = Connection::open(&live_tunnelled()).expect("connection should open");
         let result = connection
@@ -2703,7 +2703,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_the_development_database_is_fully_seeded() {
         let result = live()
             .query(
@@ -2715,16 +2715,16 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_the_databases_list_flags_the_one_connected_to() {
         let databases = live().databases().expect("databases should list");
 
-        assert!(databases.names.contains(&"dbdelve_dev".to_string()));
-        assert_eq!(databases.current.as_deref(), Some("dbdelve_dev"));
+        assert!(databases.names.contains(&"vernier_dev".to_string()));
+        assert_eq!(databases.current.as_deref(), Some("vernier_dev"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_blank_database_holds_a_use_to_where_the_login_landed() {
         let connection = Connection::open(&ServerConfig {
             database: String::new(),
@@ -2753,7 +2753,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_row_limit_keeps_each_sets_first_rows_and_counts_the_rest() {
         let connection = live();
         let feed = crate::db::Feed::default();
@@ -2782,7 +2782,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_query_round_trip() {
         let result = live()
             .query(
@@ -2805,7 +2805,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_every_result_set_of_a_batch_comes_back_in_order() {
         let connection = live();
         // The batch is the unit here, so a selection holding two statements is
@@ -2848,7 +2848,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_every_seeded_type_renders_as_the_server_prints_it() {
         let result = live()
             .query(
@@ -2941,7 +2941,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_catalog_round_trip() {
         let connection = live();
         let mut catalog = connection.catalog().expect("catalog should load");
@@ -2996,20 +2996,20 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_the_ddl_of_a_table_and_a_view_reads_back_as_their_create_statements() {
         let connection = live();
         connection
             .query(
-                "DROP TABLE IF EXISTS dbdelve_test_ddl; \
-                 CREATE TABLE dbdelve_test_ddl (id int NOT NULL, note nvarchar(40) NULL); \
-                 CREATE INDEX dbdelve_test_ddl_note ON dbdelve_test_ddl (note DESC) INCLUDE (id)",
+                "DROP TABLE IF EXISTS vernier_test_ddl; \
+                 CREATE TABLE vernier_test_ddl (id int NOT NULL, note nvarchar(40) NULL); \
+                 CREATE INDEX vernier_test_ddl_note ON vernier_test_ddl (note DESC) INCLUDE (id)",
                 Fetch::default(),
             )
             .expect("the fixture table should be created");
-        let indexed = connection.ddl("dbo", "dbdelve_test_ddl", RelationKind::Table);
+        let indexed = connection.ddl("dbo", "vernier_test_ddl", RelationKind::Table);
         connection
-            .query("DROP TABLE dbdelve_test_ddl", Fetch::default())
+            .query("DROP TABLE vernier_test_ddl", Fetch::default())
             .expect("the fixture table should be cleaned up");
         let table = connection
             .ddl("dbo", "accounts", RelationKind::Table)
@@ -3029,9 +3029,9 @@ mod tests {
         assert!(table.contains("CHECK ("), "{table}");
         assert_eq!(
             indexed.expect("the indexed table's DDL should load"),
-            "CREATE TABLE \"dbo\".\"dbdelve_test_ddl\" (\n    \"id\" int NOT NULL,\n    \
-             \"note\" nvarchar(40)\n);\nCREATE NONCLUSTERED INDEX \"dbdelve_test_ddl_note\" \
-             ON \"dbo\".\"dbdelve_test_ddl\" (\"note\" DESC) INCLUDE (\"id\");"
+            "CREATE TABLE \"dbo\".\"vernier_test_ddl\" (\n    \"id\" int NOT NULL,\n    \
+             \"note\" nvarchar(40)\n);\nCREATE NONCLUSTERED INDEX \"vernier_test_ddl_note\" \
+             ON \"dbo\".\"vernier_test_ddl\" (\"note\" DESC) INCLUDE (\"id\");"
         );
         assert!(
             view.starts_with("CREATE VIEW account_overview AS"),
@@ -3040,48 +3040,48 @@ mod tests {
         assert!(view.ends_with(';'), "{view}");
         let missing = |kind| {
             connection
-                .ddl("dbo", "dbdelve_test_ddl_missing", kind)
+                .ddl("dbo", "vernier_test_ddl_missing", kind)
                 .unwrap_err()
                 .message
         };
         assert_eq!(
             missing(RelationKind::Table),
-            "dbo has no relation dbdelve_test_ddl_missing."
+            "dbo has no relation vernier_test_ddl_missing."
         );
         assert_eq!(
             missing(RelationKind::View),
-            "\"dbo\".\"dbdelve_test_ddl_missing\" has no definition to show."
+            "\"dbo\".\"vernier_test_ddl_missing\" has no definition to show."
         );
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_the_ddl_of_a_nonclustered_descending_key_and_quoted_columns_runs_again() {
         let connection = live();
-        let ddl = || connection.ddl("dbo", "dbdelve_test_ddl_keys", RelationKind::Table);
-        let drop = "DROP TABLE IF EXISTS dbdelve_test_ddl_keys";
+        let ddl = || connection.ddl("dbo", "vernier_test_ddl_keys", RelationKind::Table);
+        let drop = "DROP TABLE IF EXISTS vernier_test_ddl_keys";
         connection
             .query(
                 &format!(
                     "{drop}; \
-                 CREATE TABLE dbdelve_test_ddl_keys ( \
+                 CREATE TABLE vernier_test_ddl_keys ( \
                      id int NOT NULL, \
                      [order] int NULL, \
                      [my col] int NULL, \
                      twice AS (id * 2) PERSISTED, \
-                     CONSTRAINT dbdelve_test_ddl_keys_pk PRIMARY KEY NONCLUSTERED (id DESC), \
-                     CONSTRAINT dbdelve_test_ddl_keys_uq UNIQUE ([my col]), \
-                     CONSTRAINT dbdelve_test_ddl_keys_fk FOREIGN KEY ([my col]) \
-                         REFERENCES dbdelve_test_ddl_keys (id)); \
-                 CREATE CLUSTERED INDEX dbdelve_test_ddl_keys_order \
-                     ON dbdelve_test_ddl_keys ([order])"
+                     CONSTRAINT vernier_test_ddl_keys_pk PRIMARY KEY NONCLUSTERED (id DESC), \
+                     CONSTRAINT vernier_test_ddl_keys_uq UNIQUE ([my col]), \
+                     CONSTRAINT vernier_test_ddl_keys_fk FOREIGN KEY ([my col]) \
+                         REFERENCES vernier_test_ddl_keys (id)); \
+                 CREATE CLUSTERED INDEX vernier_test_ddl_keys_order \
+                     ON vernier_test_ddl_keys ([order])"
                 ),
                 Fetch::default(),
             )
             .expect("the fixture table should be created");
         // The Structure tab's key text is unchanged by what the DDL spells.
         let key = connection
-            .structure("dbo", "dbdelve_test_ddl_keys")
+            .structure("dbo", "vernier_test_ddl_keys")
             .map(|structure| structure.row_key());
         let written = ddl();
         let rerun = written.as_ref().map_err(Clone::clone).and_then(|written| {
@@ -3098,18 +3098,18 @@ mod tests {
         assert_eq!(rerun.as_ref(), Ok(&written));
         for expected in [
             "\"twice\" AS ([id]*(2)) PERSISTED,",
-            "CONSTRAINT \"dbdelve_test_ddl_keys_pk\" PRIMARY KEY NONCLUSTERED (\"id\" DESC),",
-            "CONSTRAINT \"dbdelve_test_ddl_keys_uq\" UNIQUE NONCLUSTERED (\"my col\")",
+            "CONSTRAINT \"vernier_test_ddl_keys_pk\" PRIMARY KEY NONCLUSTERED (\"id\" DESC),",
+            "CONSTRAINT \"vernier_test_ddl_keys_uq\" UNIQUE NONCLUSTERED (\"my col\")",
             "FOREIGN KEY (\"my col\") REFERENCES",
-            "CREATE CLUSTERED INDEX \"dbdelve_test_ddl_keys_order\" ON \
-             \"dbo\".\"dbdelve_test_ddl_keys\" (\"order\");",
+            "CREATE CLUSTERED INDEX \"vernier_test_ddl_keys_order\" ON \
+             \"dbo\".\"vernier_test_ddl_keys\" (\"order\");",
         ] {
             assert!(written.contains(expected), "{expected} in {written}");
         }
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_structure_round_trip() {
         let structure = live()
             .structure("dbo", "accounts")
@@ -3156,7 +3156,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_foreign_keys_arrive_one_column_per_key_position_across_schemas() {
         let connection = live();
         let items = connection
@@ -3205,7 +3205,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_low_privilege_login_reads_structure_without_a_null_type_or_definition() {
         let connection = live();
         // `EXECUTE AS USER` impersonates a user with none of the permissions a
@@ -3282,7 +3282,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_indexes_show_included_columns_a_filter_and_columnstore_indexes() {
         let connection = live();
         connection
@@ -3359,7 +3359,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_foreign_keys_show_actions_and_disabled_state() {
         let connection = live();
         connection
@@ -3409,7 +3409,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_computed_or_identity_column_is_not_editable_but_still_keys_the_row() {
         let connection = live();
         connection
@@ -3452,7 +3452,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_paged_sorted_filtered_preview_runs_as_generated() {
         let connection = live();
         let preview = |filter: &str, offset| {
@@ -3535,7 +3535,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_single_table_select_is_editable_by_its_primary_key() {
         let connection = live();
         let edit = connection
@@ -3574,7 +3574,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_join_an_aggregate_a_view_or_a_missing_key_is_not_editable() {
         let connection = live();
         for sql in [
@@ -3599,7 +3599,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_describing_a_result_leaves_an_open_transaction_alone() {
         let connection = live();
         connection
@@ -3640,7 +3640,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_an_edit_round_trips_by_primary_key() {
         let connection = live();
         let run = |sql: &str| {
@@ -3744,7 +3744,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_binary_or_varchar_key_names_its_row() {
         // Through the grid, as an edit and a delete travel: the key is the
         // value the grid shows, its literal spelled by the column's type.
@@ -3832,7 +3832,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_seeded_binary_or_datetime_key_edits_and_filters_only_its_own_row() {
         // Under `british` a `datetime` literal reads year-day-month, so the
         // first row's key, misread, names the second row.
@@ -3896,7 +3896,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_seeded_spatial_preview_reads_as_text_inside_the_users_transaction() {
         let connection = live();
         let structure = connection.structure("dbo", "places").unwrap();
@@ -3934,7 +3934,7 @@ mod tests {
     // on this server, which shares an emulated CPU with every other test, so
     // in turn and at once measured each other's load rather than the overlap.
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_cancel_stops_every_read_run_at_once() {
         super::super::at_once::a_cancel_stops_them_all(
             &super::super::Connection::SqlServer(live()),
@@ -3949,7 +3949,7 @@ mod tests {
     /// lane of its own, so each lands as a result of its own rather than as a
     /// second set behind the first.
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_batch_of_plain_reads_runs_a_statement_per_lane() {
         let sql = "SELECT 1 AS a, 2 AS b; SELECT 4 AS d";
         let batches = crate::sql::queued_statements(Engine::SqlServer, sql, Some(0..sql.len()));
@@ -3978,14 +3978,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_cancel_stops_the_statement_on_the_server_and_reconnects() {
         // The probe outlives the session it is checked from only as a global
         // temporary table, which lives as long as the session that made it.
         let observer = live();
         observer
             .query(
-                "CREATE TABLE ##dbdelve_cancel_probe (id int)",
+                "CREATE TABLE ##vernier_cancel_probe (id int)",
                 Fetch::default(),
             )
             .expect("the probe should be created");
@@ -3999,7 +3999,7 @@ mod tests {
         let started = Instant::now();
         let error = connection
             .query(
-                "WAITFOR DELAY '00:00:03'; INSERT INTO ##dbdelve_cancel_probe VALUES (1)",
+                "WAITFOR DELAY '00:00:03'; INSERT INTO ##vernier_cancel_probe VALUES (1)",
                 Fetch::default(),
             )
             .expect_err("the statement should be cancelled");
@@ -4020,7 +4020,7 @@ mod tests {
         std::thread::sleep(Duration::from_secs(4));
         let count = observer
             .query(
-                "SELECT count(*) FROM ##dbdelve_cancel_probe",
+                "SELECT count(*) FROM ##vernier_cancel_probe",
                 Fetch::default(),
             )
             .unwrap();
@@ -4032,7 +4032,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_statement_timeout_stops_a_statement_that_outlasts_it() {
         let connection = Connection::open(&ServerConfig {
             statement_timeout: 1,
@@ -4089,10 +4089,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_lone_read_is_stopped_at_the_limit_by_the_server_and_the_cap_taken_back() {
         let connection = live();
-        probe_table(&connection, "#dbdelve_rowcount_probe", 50);
+        probe_table(&connection, "#vernier_rowcount_probe", 50);
         let started = Instant::now();
         let result = connection
             .query(
@@ -4108,11 +4108,11 @@ mod tests {
         assert_eq!(result.stopped, Some(Stopped::AtLimit));
         assert_eq!(result.capped_from, None);
         assert_eq!(result.rows.len(), 10);
-        touches_every_row(&connection, "#dbdelve_rowcount_probe", 50);
+        touches_every_row(&connection, "#vernier_rowcount_probe", 50);
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_read_under_the_users_own_rowcount_is_drained_and_the_rowcount_kept() {
         let connection = live();
         connection
@@ -4132,30 +4132,30 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_read_that_fails_still_takes_its_cap_back() {
         let connection = live();
-        probe_table(&connection, "#dbdelve_rowcount_probe", 50);
+        probe_table(&connection, "#vernier_rowcount_probe", 50);
         let error = connection
             .query("SELECT 1 / 0 AS x FROM sys.all_columns", stoppable(10))
             .expect_err("the division fails");
         assert!(error.message.contains("zero"), "{}", error.message);
-        touches_every_row(&connection, "#dbdelve_rowcount_probe", 50);
+        touches_every_row(&connection, "#vernier_rowcount_probe", 50);
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_read_stopped_at_the_limit_leaves_the_users_transaction_open() {
         let connection = live();
-        probe_table(&connection, "#dbdelve_rowcount_probe", 50);
+        probe_table(&connection, "#vernier_rowcount_probe", 50);
         connection
             .query(
-                "BEGIN TRANSACTION; UPDATE #dbdelve_rowcount_probe SET touched = 1 WHERE id = 1",
+                "BEGIN TRANSACTION; UPDATE #vernier_rowcount_probe SET touched = 1 WHERE id = 1",
                 Fetch::default(),
             )
             .unwrap();
         let result = connection
-            .query("SELECT id FROM #dbdelve_rowcount_probe", stoppable(10))
+            .query("SELECT id FROM #vernier_rowcount_probe", stoppable(10))
             .unwrap();
         assert_eq!(result.stopped, Some(Stopped::AtLimit));
         let open = connection
@@ -4164,7 +4164,7 @@ mod tests {
         assert_eq!(first(&open), vec![Some("1")]);
         let kept = connection
             .query(
-                "SELECT count(*) FROM #dbdelve_rowcount_probe WHERE touched = 1",
+                "SELECT count(*) FROM #vernier_rowcount_probe WHERE touched = 1",
                 Fetch::default(),
             )
             .unwrap();
@@ -4173,7 +4173,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_the_timeout_leaves_a_capped_read_to_drain_inside_an_open_transaction() {
         let connection = Connection::open(&ServerConfig {
             statement_timeout: 1,
@@ -4208,7 +4208,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_the_timeout_applies_again_to_the_set_after_one_past_the_limit() {
         let connection = Connection::open(&ServerConfig {
             statement_timeout: 1,
@@ -4236,7 +4236,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_print_and_informational_messages_come_back_in_order_without_transaction_changes() {
         let result = live()
             .query(
@@ -4252,7 +4252,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_use_that_returns_reports_each_change_of_database() {
         let database = live_config().database;
         let result = live()
@@ -4273,7 +4273,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_only_the_submission_itself_carries_messages() {
         let connection = live();
         let plain = connection.query("SELECT 1 AS a", Fetch::default()).unwrap();
@@ -4288,7 +4288,7 @@ mod tests {
         assert_eq!(sets.messages, vec!["one", "two"]);
         assert!(sets.rest.iter().all(|set| set.messages.is_empty()));
 
-        // The `USE` that moves the session back is dbdelve's, and its change
+        // The `USE` that moves the session back is vernier's, and its change
         // of database is nobody's message.
         connection
             .query("USE master", Fetch::default())
@@ -4301,7 +4301,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_use_is_moved_back_and_said() {
         let connection = live();
         let error = connection
@@ -4315,7 +4315,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_use_is_moved_back_when_the_batch_fails_too() {
         let connection = live();
         let error = connection
@@ -4337,7 +4337,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_type_the_driver_cannot_read_is_refused_without_losing_the_session() {
         let connection = live();
         connection
@@ -4385,8 +4385,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
-    fn live_dbdelves_statements_run_under_their_own_options_and_leave_the_users_alone() {
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
+    fn live_verniers_statements_run_under_their_own_options_and_leave_the_users_alone() {
         let connection = live();
         connection
             .query(
@@ -4471,7 +4471,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_failure_says_what_it_did_to_a_transaction_begun_before_it() {
         let connection = live();
         connection
@@ -4515,7 +4515,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_write_reports_the_rows_it_affected() {
         let connection = live();
         let count = |sql: &str| {
@@ -4531,7 +4531,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_users_statement_is_checked_under_the_users_own_quoting() {
         let connection = live();
         connection
@@ -4560,7 +4560,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_datetime_literal_reads_the_same_under_any_language() {
         let connection = live();
         connection
@@ -4571,7 +4571,7 @@ mod tests {
                 Fetch::default(),
             )
             .unwrap();
-        // The user's own session, not dbdelve's options: a statement appended
+        // The user's own session, not vernier's options: a statement appended
         // to a query tab's buffer runs as the user's.
         connection
             .query("SET LANGUAGE british", Fetch::default())
@@ -4595,7 +4595,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_rowversion_filters_by_its_bare_hex() {
         let connection = live();
         connection
@@ -4634,7 +4634,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_an_error_inside_a_procedure_points_at_nothing_in_the_batch() {
         let connection = live();
         connection
@@ -4651,19 +4651,19 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_round_trip_beside_the_statement_is_bounded_by_the_timeout() {
         let observer = live();
         observer
             .query(
-                "CREATE TABLE ##dbdelve_lock_probe (id int)",
+                "CREATE TABLE ##vernier_lock_probe (id int)",
                 Fetch::default(),
             )
             .unwrap();
         // A schema lock, held until the rollback, blocks even describing it.
         observer
             .query(
-                "BEGIN TRANSACTION; ALTER TABLE ##dbdelve_lock_probe ADD extra int",
+                "BEGIN TRANSACTION; ALTER TABLE ##vernier_lock_probe ADD extra int",
                 Fetch::default(),
             )
             .unwrap();
@@ -4674,7 +4674,7 @@ mod tests {
         .expect("connection should open");
         let started = Instant::now();
         let error = connection
-            .query("SELECT * FROM ##dbdelve_lock_probe", Fetch::default())
+            .query("SELECT * FROM ##vernier_lock_probe", Fetch::default())
             .expect_err("the lock outlasts the timeout");
         assert!(started.elapsed() < Duration::from_secs(5));
         assert!(error.message.contains("1-second"), "{}", error.message);
@@ -4683,7 +4683,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_a_cancel_while_queued_behind_a_catalog_load_stops_the_statement_not_the_load() {
         let connection = live();
         let loader = connection.clone();
@@ -4752,7 +4752,7 @@ mod tests {
     /// signed by nobody. Hard rule 6: the rungs that promise only encryption
     /// connect, and the two verifying rungs refuse and say why.
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_MSSQL_URL"]
+    #[ignore = "requires the repository development database configured through vernier_MSSQL_URL"]
     fn live_only_the_modes_that_tolerate_an_unchecked_certificate_connect() {
         let connect = |sslmode| {
             Connection::open(&ServerConfig {
@@ -4815,7 +4815,7 @@ mod tests {
 
     crate::db::conformance::suite!(
         live_conformance,
-        "requires the repository development database configured through dbdelve_MSSQL_URL",
+        "requires the repository development database configured through vernier_MSSQL_URL",
         conformance_subject:
         connects,
         query_round_trip,

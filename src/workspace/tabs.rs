@@ -528,7 +528,7 @@ impl Workspace {
         }
     }
 
-    /// The theme is written into dbdelve's own directory first, so picking it
+    /// The theme is written into vernier's own directory first, so picking it
     /// is the same pick a theme already listed would be.
     pub(crate) fn import_theme(
         &mut self,
@@ -609,7 +609,7 @@ impl Workspace {
         self.set_opacity(stepped, window, cx);
     }
 
-    /// Back out of whatever dbdelve has in front of the tab, one layer at a time.
+    /// Back out of whatever vernier has in front of the tab, one layer at a time.
     pub(crate) fn show_editor(
         &mut self,
         _: &ShowEditor,
@@ -714,7 +714,7 @@ impl Workspace {
             cx.notify();
             return;
         }
-        // Nothing of dbdelve's is stacked over the tab, so the keystroke is not
+        // Nothing of vernier's is stacked over the tab, so the keystroke is not
         // ours. Handing it on is what lets the completion popup close and a
         // grid cell's input cancel its edit; this binding is unscoped and would
         // otherwise win it at every depth. Never a tab switch, on any tab: that

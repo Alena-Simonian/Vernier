@@ -1706,22 +1706,22 @@ source: src/sql_snapshots.rs
   = write_on=true select=false classify=ReadWrite [] gate ro=Some(Upgrade(ReadWrite)) rw=None full=None
 
 [mongodb] conflict column a.b · skip=false
-  error: |`a.b` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`a.b` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] conflict column a.b · skip=true
-  error: |`a.b` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`a.b` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] conflict column  · skip=false
-  error: |`` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] conflict column  · skip=true
-  error: |`` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] operator column · skip=false
-  error: |`$set` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`$set` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] operator column · skip=true
-  error: |`$set` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`$set` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] relation plain · skip=false
   |db.getCollection("accounts").insertMany([{"id": 1, "Name": "it's \\\\ é", "flag": true, "at": ISODate("2024-01-02T03:04:05.123Z")},|

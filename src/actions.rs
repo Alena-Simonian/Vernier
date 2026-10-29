@@ -13,7 +13,7 @@ use crate::{db::ExplainMode, export::RowsAs, filter::Operator, import::Source, s
 /// belongs to is whatever surface is in front, because that is the grid the
 /// click came from.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SortColumn {
     pub(crate) column: usize,
 }
@@ -22,7 +22,7 @@ pub(crate) struct SortColumn {
 /// is named by position in the stack, which is how every one of these reaches
 /// it: the stack is what the user is pointing at.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetFilterColumn {
     pub(crate) row: usize,
     pub(crate) column: String,
@@ -31,13 +31,13 @@ pub(crate) struct SetFilterColumn {
 /// Turn a bar into one the user writes SQL into, which has no column and no
 /// operator left to pick.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetFilterRaw {
     pub(crate) row: usize,
 }
 
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetFilterOperator {
     pub(crate) row: usize,
     pub(crate) operator: Operator,
@@ -45,20 +45,20 @@ pub(crate) struct SetFilterOperator {
 
 /// Flip how a bar joins to the bar above it.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct ToggleFilterJoin {
     pub(crate) row: usize,
 }
 
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct RemoveFilter {
     pub(crate) row: usize,
 }
 
 /// Copy the active cell's row to the clipboard in the chosen shape.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct CopyRows {
     pub(crate) kind: RowsAs,
 }
@@ -66,22 +66,22 @@ pub(crate) struct CopyRows {
 /// The arrow on a key cell: find which relations hold rows that reference the
 /// key in the active cell, and offer them.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct ShowReferences;
 
 /// Open a relation that points at the key in the active cell, filtered to the
 /// rows that reference it. The index is into the tab's `Structure::referenced_by`.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct OpenReference {
     pub(crate) index: usize,
 }
 
 /// How many rows a relation's preview asks for, `None` for all of them.
-/// dbdelve's own statement carries the limit, so the only thing to say is the
+/// vernier's own statement carries the limit, so the only thing to say is the
 /// number.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetRowLimit {
     pub(crate) rows: Option<usize>,
 }
@@ -97,14 +97,14 @@ pub(crate) enum LimitTarget {
 
 /// The Settings row limit, `None` for no limit.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetDefaultRowLimit {
     pub(crate) rows: Option<usize>,
 }
 
 /// Swap a row-limit menu for a field to type a number of one's own into.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct CustomRowLimit {
     pub(crate) target: LimitTarget,
 }
@@ -112,7 +112,7 @@ pub(crate) struct CustomRowLimit {
 /// How many rows a query tab keeps of what its statements return, `None` for
 /// all of them. The statement is never changed: see AGENTS.md, hard rule 1.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetQueryLimit {
     pub(crate) rows: Option<usize>,
 }
@@ -121,7 +121,7 @@ pub(crate) struct SetQueryLimit {
 /// travels with the action because it is the user's choice at the menu, and the
 /// difference between the two is whether the statement is executed.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct ExplainQuery {
     pub(crate) mode: ExplainMode,
 }
@@ -130,7 +130,7 @@ pub(crate) struct ExplainQuery {
 /// mode menu. The mode travels with the action because it is the user's
 /// choice at the menu, not something the handler can infer.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct SetMode {
     pub(crate) mode: Mode,
 }
@@ -138,13 +138,13 @@ pub(crate) struct SetMode {
 /// Bring another client's connections in. One action for every source, so
 /// each gets its own row in the keybinding settings without its own handler.
 #[derive(Clone, PartialEq, Eq, Deserialize, Action)]
-#[action(namespace = dbdelve, no_json)]
+#[action(namespace = vernier, no_json)]
 pub(crate) struct ImportConnections {
     pub(crate) source: Source,
 }
 
 actions!(
-    dbdelve,
+    vernier,
     [
         RunQuery,
         CancelQuery,

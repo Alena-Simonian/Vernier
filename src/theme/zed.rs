@@ -1,8 +1,8 @@
 //! Zed's theme format, and the themes Zed has on this machine for
 //! [`super::user::Source::Zed`] to import: its own defaults, which are compiled
 //! into Zed rather than installed, its themes directory and its extensions.
-//! dbdelve's native format is read and written here too, since a file in
-//! dbdelve's own directory may be either.
+//! vernier's native format is read and written here too, since a file in
+//! vernier's own directory may be either.
 
 use std::path::{Path, PathBuf};
 
@@ -111,7 +111,7 @@ pub(super) fn keep_untaken(themes: &mut Vec<Theme>, taken: &mut Vec<&'static str
     });
 }
 
-/// A file in dbdelve's own directory: a Zed family, or one native theme. A
+/// A file in vernier's own directory: a Zed family, or one native theme. A
 /// glass theme comes out glassed.
 pub(super) fn parse_own(text: &str) -> Result<Vec<Theme>, String> {
     let value: Value = serde_json::from_str(text).map_err(|error| error.to_string())?;
@@ -192,7 +192,7 @@ fn native(value: &Value) -> Option<Theme> {
 }
 
 /// The inverse of [`native`]: every colour, so the file does not lean on
-/// whichever base a later dbdelve falls back to.
+/// whichever base a later vernier falls back to.
 pub(super) fn native_text(theme: &Theme) -> String {
     let mut colors = serde_json::Map::new();
     macro_rules! put {
@@ -383,12 +383,12 @@ mod tests {
                             "syntax": { "keyword": { "color": "#aa0055", "font_weight": 700 } }
                         }
                     },
-                    { "name": "DBDelve Dark", "style": {} }
+                    { "name": "Vernier Dark", "style": {} }
                 ]
             }"##,
         )
         .unwrap();
-        keep_untaken(&mut themes, &mut vec!["dbdelve dark"]);
+        keep_untaken(&mut themes, &mut vec!["vernier dark"]);
         let [theme] = themes.as_slice() else {
             panic!("the built-in name should be skipped: {themes:?}");
         };

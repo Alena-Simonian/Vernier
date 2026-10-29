@@ -16,7 +16,7 @@ const REDIS: Engine = Engine::Redis;
 
 /// Duplicated from the private `SENTINEL` in `redis_cmd/edit.rs`; if its
 /// spelling changes, the "exactly twice" assertion below fails loudly.
-const SENTINEL_PREFIX: &str = "dbdelve:deleted:";
+const SENTINEL_PREFIX: &str = "vernier:deleted:";
 
 fn pending(
     schema: &str,

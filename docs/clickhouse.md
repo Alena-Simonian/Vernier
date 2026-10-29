@@ -1,6 +1,6 @@
 # ClickHouse
 
-DBDelve speaks to ClickHouse over its HTTP interface, the one ClickHouse Cloud
+Vernier speaks to ClickHouse over its HTTP interface, the one ClickHouse Cloud
 and managed hosts expose. The native protocol (port 9000) is not supported; a
 URL pointing at it fails saying the host did not answer as an HTTP server. This
 page is what you need to know before filling in the form, and what behaves
@@ -19,7 +19,7 @@ clickhouse://user:password@db.example.com:8443/analytics?sslmode=verify-full
 The development container:
 
 ```text
-clickhouse://dbdelve:dbdelve@127.0.0.1:58123/dbdelve_dev?sslmode=disable
+clickhouse://vernier:vernier@127.0.0.1:58123/vernier_dev?sslmode=disable
 ```
 
 A ClickHouse Cloud service that is idle wakes on the first query, so the
@@ -30,14 +30,14 @@ Full. Databases are the schemas the explorer lists.
 
 A Read-only profile sends every request with `readonly=2`, which the server
 enforces and a `SET` cannot lift. It does not stop `BACKUP` or `RESTORE`, so
-DBDelve classifies those, and anything it cannot parse, by the statement's
+Vernier classifies those, and anything it cannot parse, by the statement's
 first word. A `SELECT` from `url()`, `s3()` and the other table functions is a
 read; `INSERT INTO FUNCTION` needs Full.
 
 ## Editing rows
 
 ClickHouse has no unique key, so a row is named by all of its values as read,
-and DBDelve runs a `COUNT(*)` with the identical condition before every
+and Vernier runs a `COUNT(*)` with the identical condition before every
 update or delete and writes only when exactly one row matches. Identical rows
 (a `ReplacingMergeTree` duplicate not yet merged, say) are refused, as is a
 row changed since you read it. Another client can still write between the count
@@ -77,12 +77,12 @@ and the write.
 
 Cancel and a read stopped at the row limit both send `KILL QUERY` to the
 server, again every 100 ms until it lands. If it has not landed after 10
-seconds, DBDelve stops reading and says the statement may still be running on
-the server. The statement timeout is sent as `max_execution_time`, and DBDelve
+seconds, Vernier stops reading and says the statement may still be running on
+the server. The statement timeout is sent as `max_execution_time`, and Vernier
 also stops waiting a little after it. Mutations keep running on the server
 after a Cancel; `KILL MUTATION` stops one.
 
 ## Explain
 
 Explain runs `EXPLAIN` on a copy of the statement, which plans it and never
-runs it. DBDelve does not offer the server's `EXPLAIN ANALYZE` (26.7+).
+runs it. Vernier does not offer the server's `EXPLAIN ANALYZE` (26.7+).

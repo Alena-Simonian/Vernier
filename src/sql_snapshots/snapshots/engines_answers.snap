@@ -1757,4 +1757,4 @@ parse |\u{9}redis | => redis
 parse |rediss| => redis
 parse |REDISS| => redis
 parse |\u{9}rediss | => redis
-parse |nope| => error: nope is not a database engine dbdelve speaks.
+parse |nope| => error: nope is not a database engine vernier speaks.

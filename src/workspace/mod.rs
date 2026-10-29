@@ -57,7 +57,7 @@ pub(crate) struct Settings {
     pub(crate) light_theme: String,
     pub(crate) dark_theme: String,
     /// One request to GitHub at launch. Off switch because local-first users
-    /// get to say no to the only request DBDelve makes on its own.
+    /// get to say no to the only request Vernier makes on its own.
     pub(crate) check_for_updates: bool,
     /// Some people want the connection colour on the switcher only, not a
     /// painted band across the window.
@@ -718,7 +718,7 @@ impl Workspace {
         self.profiles.get_mut(self.active)
     }
 
-    /// The engine every statement dbdelve generates is written for. With no
+    /// The engine every statement vernier generates is written for. With no
     /// profile there is nothing to run it against, so the default is only ever
     /// used to build a string nobody sends.
     pub(crate) fn engine(&self) -> Engine {
@@ -739,7 +739,7 @@ impl Workspace {
     /// session.
     ///
     /// Called from the gestures that run SQL rather than from
-    /// `execute_and_then`, because a statement dbdelve runs on its own — restoring
+    /// `execute_and_then`, because a statement vernier runs on its own — restoring
     /// a tab at startup — would otherwise clear a notice nobody has read yet,
     /// and one of those says the connection came up weaker than it asked for.
     pub(crate) fn clear_notice(&mut self) {
@@ -1545,7 +1545,7 @@ impl Render for Workspace {
         let left_stats = (!left_stats.is_empty()).then(|| left_stats.join(" \u{b7} "));
         // The dot carries the state and the text carries the words. A whole
         // status line in green shouts about being connected, which is the
-        // least interesting thing dbdelve can tell you.
+        // least interesting thing vernier can tell you.
         let status_group = div()
             .flex()
             .items_center()
@@ -2348,7 +2348,7 @@ mod tests {
         assert_eq!(worn(&settings, Light), Some("GitHub Light"));
         assert_eq!(worn(&settings, Dark), Some("Dracula"));
         settings.set_theme_for(Dark, "Deleted Since");
-        assert_eq!(worn(&settings, Dark), Some("DBDelve Black"));
+        assert_eq!(worn(&settings, Dark), Some("Vernier Black"));
     }
 
     #[test]

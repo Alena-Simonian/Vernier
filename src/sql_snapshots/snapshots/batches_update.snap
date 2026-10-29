@@ -24,7 +24,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [postgres] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [mysql] one row
   |UPDATE `public`.`accounts` SET `Name` = 'it''s' WHERE `id` = '7';|
@@ -52,7 +52,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [mysql] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [mariadb] one row
   |UPDATE `public`.`accounts` SET `Name` = 'it''s' WHERE `id` = '7';|
@@ -80,7 +80,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [mariadb] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [sqlite] one row
   |UPDATE "public"."accounts" SET "Name" = 'it''s' WHERE "id" = '7';|
@@ -108,7 +108,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [sqlite] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [turso] one row
   |UPDATE "public"."accounts" SET "Name" = 'it''s' WHERE "id" = '7';|
@@ -136,7 +136,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [turso] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [duckdb] one row
   |UPDATE "public"."accounts" SET "Name" = 'it''s' WHERE "id" = '7';|
@@ -164,7 +164,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [duckdb] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [snowflake] one row
   |UPDATE "public"."accounts" SET "Name" = 'it''s' WHERE "id" = '7';|
@@ -192,7 +192,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [snowflake] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [clickhouse] one row
   |UPDATE `public`.`accounts` SET `Name` = 'it''s' WHERE `id` = '7';|
@@ -216,7 +216,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [clickhouse] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [clickhouse] null terms
   |UPDATE `public`.`accounts` SET `Name` = 'it''s' WHERE `id` = '7' AND `Region` IS NULL AND `flag` IS NULL;|
@@ -274,7 +274,7 @@ source: src/sql_snapshots.rs
   error: |There are no edits to apply.|
 
 [mssql] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [mongodb] one row
   |db.getCollection("accounts").updateOne({_id: ObjectId("65f0c0ffee0000000000abcd")}, {$set: {"Name": "it's"}});|
@@ -321,22 +321,22 @@ source: src/sql_snapshots.rs
   error: |_id: `xyz` does not read as a value of type objectId.|
 
 [mongodb] empty field name
-  error: |`` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] dotted field name
-  error: |`a.b` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`a.b` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] operator field name
-  error: |`$set` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`$set` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] operator value
-  error: |x: a field name starting with `$` inside a value is an operator, which DBDelve does not write.|
+  error: |x: a field name starting with `$` inside a value is an operator, which Vernier does not write.|
 
 [mongodb] empty
   error: |There are no edits to apply.|
 
 [mongodb] keyless
-  error: |dbdelve cannot name an edited row by its primary key.|
+  error: |vernier cannot name an edited row by its primary key.|
 
 [redis] keys grid edit
   |SET user:1 "a\\nb é" XX KEEPTTL GET|

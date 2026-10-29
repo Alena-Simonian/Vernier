@@ -1,10 +1,10 @@
--- Run by the image's entrypoint as the `dbdelve` user, in the order the file
+-- Run by the image's entrypoint as the `vernier` user, in the order the file
 -- is written. `type_gallery` is last on purpose: the healthcheck counts its
 -- rows, so the container is healthy only once the whole seed has applied.
 
 CREATE DATABASE IF NOT EXISTS analytics;
 
-USE dbdelve_dev;
+USE vernier_dev;
 
 -- The engine conformance suite's fixture (src/db/conformance.rs): the same
 -- shape in every seed. `whole` is above 2^53 on purpose. Ids 900 and up belong
@@ -90,7 +90,7 @@ CREATE DICTIONARY plan_seats (
     plan String,
     seats UInt32
 ) PRIMARY KEY plan
-SOURCE(CLICKHOUSE(TABLE 'plans' DB 'dbdelve_dev' USER 'dbdelve' PASSWORD 'dbdelve'))
+SOURCE(CLICKHOUSE(TABLE 'plans' DB 'vernier_dev' USER 'vernier' PASSWORD 'vernier'))
 LAYOUT(COMPLEX_KEY_HASHED())
 LIFETIME(0);
 
@@ -155,14 +155,14 @@ INSERT INTO edit_sum VALUES (1, 5), (2, 7);
 
 -- A user the server holds to reads, and one who may select and insert but not
 -- alter.
-CREATE USER IF NOT EXISTS dbdelve_reader IDENTIFIED BY 'dbdelve' SETTINGS readonly = 1;
-GRANT SELECT ON dbdelve_dev.* TO dbdelve_reader;
-GRANT SELECT ON analytics.* TO dbdelve_reader;
-GRANT SELECT ON system.* TO dbdelve_reader;
+CREATE USER IF NOT EXISTS vernier_reader IDENTIFIED BY 'vernier' SETTINGS readonly = 1;
+GRANT SELECT ON vernier_dev.* TO vernier_reader;
+GRANT SELECT ON analytics.* TO vernier_reader;
+GRANT SELECT ON system.* TO vernier_reader;
 
-CREATE USER IF NOT EXISTS dbdelve_noalter IDENTIFIED BY 'dbdelve';
-GRANT SELECT, INSERT ON dbdelve_dev.* TO dbdelve_noalter;
-GRANT SELECT ON system.* TO dbdelve_noalter;
+CREATE USER IF NOT EXISTS vernier_noalter IDENTIFIED BY 'vernier';
+GRANT SELECT, INSERT ON vernier_dev.* TO vernier_noalter;
+GRANT SELECT ON system.* TO vernier_noalter;
 
 -- Every type the grid maps, two rows, with tab, quote and backslash nested in
 -- strings where the escaping differs by depth.

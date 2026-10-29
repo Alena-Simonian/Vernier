@@ -1,17 +1,21 @@
+-- Build a fresh file with `duckdb dev/vernier_dev.duckdb < dev/duckdb/001-vernier-demo.sql`.
+-- Not idempotent: it expects the file not to exist, so remove it first.
+
 CREATE TABLE accounts (
     id INTEGER PRIMARY KEY,
     external_id TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     email TEXT,
     plan TEXT NOT NULL CHECK (plan IN ('free', 'team', 'enterprise')),
-    balance NUMERIC NOT NULL,
+    balance DECIMAL(18, 2) NOT NULL,
     active BOOLEAN NOT NULL,
-    tags TEXT NOT NULL,
-    metadata TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    tags JSON NOT NULL,
+    metadata JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL
 );
 
 INSERT INTO accounts (
+    id,
     external_id,
     name,
     email,
@@ -23,6 +27,7 @@ INSERT INTO accounts (
     created_at
 ) VALUES
     (
+        1,
         '018f1f6e-7c2a-7000-8000-000000000001',
         'Ada Lovelace',
         'ada@example.test',
@@ -34,6 +39,7 @@ INSERT INTO accounts (
         '2024-01-15 09:30:00'
     ),
     (
+        2,
         '018f1f6e-7c2a-7000-8000-000000000002',
         'Grace Hopper',
         'grace@example.test',
@@ -45,6 +51,7 @@ INSERT INTO accounts (
         '2024-02-29 12:00:00'
     ),
     (
+        3,
         '018f1f6e-7c2a-7000-8000-000000000003',
         'Edsger Dijkstra',
         NULL,
@@ -56,6 +63,7 @@ INSERT INTO accounts (
         '2024-03-10 18:45:12.123456'
     ),
     (
+        4,
         '018f1f6e-7c2a-7000-8000-000000000004',
         '李小龍',
         'bruce.lee@example.test',
@@ -67,6 +75,7 @@ INSERT INTO accounts (
         '2024-04-01 00:00:00'
     ),
     (
+        5,
         '018f1f6e-7c2a-7000-8000-000000000005',
         'Quotes ''n'' Backslashes \\',
         'escaping@example.test',
@@ -82,24 +91,19 @@ INSERT INTO accounts (
 -- something to work against rather than a grid that fits on screen.
 CREATE TABLE measurements (
     id INTEGER PRIMARY KEY,
-    recorded_at TEXT NOT NULL,
+    recorded_at TIMESTAMP NOT NULL,
     sensor TEXT NOT NULL,
-    temperature_c REAL,
-    pressure_kpa NUMERIC,
+    temperature_c DOUBLE,
+    pressure_kpa DECIMAL(8, 3),
     healthy BOOLEAN NOT NULL,
-    samples TEXT NOT NULL,
-    payload TEXT NOT NULL
+    samples JSON NOT NULL,
+    payload JSON NOT NULL
 );
 
-WITH RECURSIVE series (sample) AS (
-    SELECT 1
-    UNION ALL
-    SELECT sample + 1 FROM series WHERE sample < 5000
-)
 INSERT INTO measurements
 SELECT
     sample,
-    strftime('%Y-%m-%d %H:%M:%f', '2025-01-01 00:00:00', (sample * 15) || ' seconds'),
+    TIMESTAMP '2025-01-01 00:00:00' + to_seconds(sample * 15),
     'sensor-' || printf('%02d', (sample - 1) % 24 + 1),
     -- A null every 97th row, so the grid's null rendering is reachable by
     -- scrolling rather than only by writing a query for it.
@@ -112,50 +116,41 @@ SELECT
         'firmware', 'v' || (1 + sample % 3) || '.' || (sample % 10),
         'flags', json_array(sample % 2 = 0, sample % 5 = 0)
     )
-FROM series;
+FROM range(1, 5001) AS series (sample);
 
 -- Values far larger than a cell can show, and values a cell would misread:
--- embedded newlines, an embedded semicolon, a JSON null, and raw bytes. The
--- blob is what exercises the `x'...'` rendering.
+-- embedded newlines, an embedded semicolon, a JSON null, and raw bytes.
 CREATE TABLE documents (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
     body TEXT,
-    document TEXT,
+    document JSON,
     binary_value BLOB
 );
 
 INSERT INTO documents VALUES (
     1,
     'Multiline text',
-    -- SQLite has no backslash escapes in a string literal, so the newlines are
+    -- A plain string literal has no backslash escapes, so the newlines are
     -- built rather than written.
-    'first line' || char(10) || 'second line' || char(10) || 'third line; with a semicolon',
+    'first line' || chr(10) || 'second line' || chr(10) || 'third line; with a semicolon',
     '{"kind":"short","nested":{"null_value":null}}',
-    x'00010203FEFF'
+    '\x00\x01\x02\x03\xFE\xFF'::BLOB
 );
 
--- SQLite has no `repeat`, so a run of N copies is `hex(zeroblob(N))` -- 2N
--- zero characters -- with each '00' replaced by the text to repeat.
-WITH RECURSIVE series (value) AS (
-    SELECT 1
-    UNION ALL
-    SELECT value + 1 FROM series WHERE value < 500
-)
 INSERT INTO documents
 SELECT
     2,
     'Large values',
-    replace(hex(zeroblob(2048)), '00', 'DBDelve keeps the complete value while the grid clips visually. '),
+    repeat('Vernier keeps the complete value while the grid clips visually. ', 2048),
     json_object(
         'kind', 'large',
-        'values', json_group_array(json_object('index', value, 'square', value * value))
+        'values', (SELECT json_group_array(json_object('index', value, 'square', value * value)) FROM range(1, 501) AS series (value))
     ),
-    unhex(replace(hex(zeroblob(4096)), '00', 'deadbeef'))
-FROM series;
+    repeat('\xDE\xAD\xBE\xEF'::BLOB, 4096);
 
--- Geometry columns (`point`, `boundary`) are PostGIS-only; SQLite has no
--- built-in geometry type (SpatiaLite is a separate extension, out of scope).
+-- Geometry columns (`point`, `boundary`) are PostGIS-only; DuckDB's spatial
+-- extension is separate and out of scope.
 CREATE TABLE locations (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL
@@ -171,8 +166,8 @@ INSERT INTO locations (id, name) VALUES
 CREATE TABLE orders (
     account_id INTEGER NOT NULL REFERENCES accounts (id),
     number INTEGER NOT NULL,
-    placed_at TEXT NOT NULL,
-    total NUMERIC NOT NULL,
+    placed_at TIMESTAMP NOT NULL,
+    total DECIMAL(18, 2) NOT NULL,
     PRIMARY KEY (account_id, number)
 );
 
@@ -197,10 +192,17 @@ INSERT INTO order_items VALUES
     (2, 1, 1002, 'Punch card stock', 500),
     (3, 2, 2001, 'Compiler seat', 1);
 
--- There is deliberately no cross-schema fixture here. A SQLite foreign key may
--- not reference an attached database, so the parent of every key is always in
--- the database the key itself lives in -- the case Postgres and MySQL cover
--- cannot be written at all against SQLite, rather than merely being omitted.
+CREATE SCHEMA analytics;
+
+-- DuckDB refuses a foreign key across schemas, so there is no cross-schema
+-- fixture of that kind; this is a second schema for the tree to list, keyed to
+-- `accounts` by value only.
+CREATE TABLE analytics.account_scores (
+    account_id INTEGER PRIMARY KEY,
+    score DOUBLE NOT NULL
+);
+
+INSERT INTO analytics.account_scores VALUES (1, 99.5), (2, 87.25), (3, 12.0);
 
 CREATE VIEW account_overview AS
 SELECT
@@ -211,10 +213,9 @@ SELECT
 FROM accounts
 GROUP BY plan;
 
--- account_label is a Postgres/MySQL stored function; SQLite has no stored
--- functions, so there is nothing to port here.
--- `deactivate_account` is a Postgres/MySQL stored procedure, and has nowhere to
--- go here for the same reason.
+-- account_label is a Postgres/MySQL stored function and deactivate_account a
+-- stored procedure; DuckDB has neither (macros are not catalogued as routines
+-- here), so there is nothing to port.
 
 -- The engine conformance suite's fixture (src/db/conformance.rs): one table,
 -- the same shape in every seed. `whole` is above 2^53 on purpose. Ids 900 and
@@ -222,19 +223,19 @@ GROUP BY plan;
 
 CREATE TABLE conformance (
     id INTEGER PRIMARY KEY,
-    label TEXT NOT NULL,
-    whole INTEGER,
-    fraction NUMERIC,
-    ratio REAL,
+    label VARCHAR NOT NULL,
+    whole BIGINT,
+    fraction DECIMAL(10, 2),
+    ratio DOUBLE,
     flag BOOLEAN,
     day DATE,
-    moment DATETIME,
+    moment TIMESTAMP,
     bytes BLOB
 );
 
 INSERT INTO conformance (id, label, whole, fraction, ratio, flag, day, moment, bytes) VALUES
-    (1, 'alpha', 9007199254740993, 12.50, 0.5, 1, '2024-02-29', '2024-02-29 12:34:56', X'00FF'),
-    (2, 'Zoë 李 🐉 ''quoted''', -42, -0.01, -1.25, 0, '1999-12-31', '1999-12-31 23:59:59', X'DEADBEEF'),
+    (1, 'alpha', 9007199254740993, 12.50, 0.5, true, '2024-02-29', '2024-02-29 12:34:56', '\x00\xFF'::BLOB),
+    (2, 'Zoë 李 🐉 ''quoted''', -42, -0.01, -1.25, false, '1999-12-31', '1999-12-31 23:59:59', '\xDE\xAD\xBE\xEF'::BLOB),
     (3, 'nulls', NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- A million rows and two hundred columns: the fixtures the grid's paging and
@@ -244,15 +245,13 @@ CREATE TABLE events (
     id INTEGER PRIMARY KEY,
     account_id INTEGER NOT NULL,
     kind TEXT NOT NULL,
-    amount NUMERIC NOT NULL,
-    occurred_at TEXT NOT NULL
+    amount DECIMAL(18, 2) NOT NULL,
+    occurred_at TIMESTAMP NOT NULL
 );
 
-INSERT INTO events (account_id, kind, amount, occurred_at)
-WITH RECURSIVE n(i) AS (
-    SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 1000000
-)
-SELECT (i % 6) + 1,
+INSERT INTO events
+SELECT i,
+       (i % 6) + 1,
        CASE i % 6
            WHEN 0 THEN 'click'
            WHEN 1 THEN 'view'
@@ -262,217 +261,215 @@ SELECT (i % 6) + 1,
            ELSE 'churn'
        END,
        (i % 100000) / 100.0,
-       datetime('2024-01-01 00:00:00', '+' || i || ' seconds')
-FROM n;
+       TIMESTAMP '2024-01-01 00:00:00' + to_seconds(i)
+FROM range(1, 1000001) AS n (i);
 
 CREATE TABLE wide_metrics (
     id INTEGER PRIMARY KEY,
     c001 INTEGER NOT NULL,
-    c002 REAL NOT NULL,
+    c002 DOUBLE NOT NULL,
     c003 TEXT NOT NULL,
     c004 INTEGER NOT NULL,
-    c005 REAL NOT NULL,
+    c005 DOUBLE NOT NULL,
     c006 TEXT NOT NULL,
     c007 INTEGER NOT NULL,
-    c008 REAL NOT NULL,
+    c008 DOUBLE NOT NULL,
     c009 TEXT NOT NULL,
     c010 INTEGER NOT NULL,
-    c011 REAL NOT NULL,
+    c011 DOUBLE NOT NULL,
     c012 TEXT NOT NULL,
     c013 INTEGER NOT NULL,
-    c014 REAL NOT NULL,
+    c014 DOUBLE NOT NULL,
     c015 TEXT NOT NULL,
     c016 INTEGER NOT NULL,
-    c017 REAL NOT NULL,
+    c017 DOUBLE NOT NULL,
     c018 TEXT NOT NULL,
     c019 INTEGER NOT NULL,
-    c020 REAL NOT NULL,
+    c020 DOUBLE NOT NULL,
     c021 TEXT NOT NULL,
     c022 INTEGER NOT NULL,
-    c023 REAL NOT NULL,
+    c023 DOUBLE NOT NULL,
     c024 TEXT NOT NULL,
     c025 INTEGER NOT NULL,
-    c026 REAL NOT NULL,
+    c026 DOUBLE NOT NULL,
     c027 TEXT NOT NULL,
     c028 INTEGER NOT NULL,
-    c029 REAL NOT NULL,
+    c029 DOUBLE NOT NULL,
     c030 TEXT NOT NULL,
     c031 INTEGER NOT NULL,
-    c032 REAL NOT NULL,
+    c032 DOUBLE NOT NULL,
     c033 TEXT NOT NULL,
     c034 INTEGER NOT NULL,
-    c035 REAL NOT NULL,
+    c035 DOUBLE NOT NULL,
     c036 TEXT NOT NULL,
     c037 INTEGER NOT NULL,
-    c038 REAL NOT NULL,
+    c038 DOUBLE NOT NULL,
     c039 TEXT NOT NULL,
     c040 INTEGER NOT NULL,
-    c041 REAL NOT NULL,
+    c041 DOUBLE NOT NULL,
     c042 TEXT NOT NULL,
     c043 INTEGER NOT NULL,
-    c044 REAL NOT NULL,
+    c044 DOUBLE NOT NULL,
     c045 TEXT NOT NULL,
     c046 INTEGER NOT NULL,
-    c047 REAL NOT NULL,
+    c047 DOUBLE NOT NULL,
     c048 TEXT NOT NULL,
     c049 INTEGER NOT NULL,
-    c050 REAL NOT NULL,
+    c050 DOUBLE NOT NULL,
     c051 TEXT NOT NULL,
     c052 INTEGER NOT NULL,
-    c053 REAL NOT NULL,
+    c053 DOUBLE NOT NULL,
     c054 TEXT NOT NULL,
     c055 INTEGER NOT NULL,
-    c056 REAL NOT NULL,
+    c056 DOUBLE NOT NULL,
     c057 TEXT NOT NULL,
     c058 INTEGER NOT NULL,
-    c059 REAL NOT NULL,
+    c059 DOUBLE NOT NULL,
     c060 TEXT NOT NULL,
     c061 INTEGER NOT NULL,
-    c062 REAL NOT NULL,
+    c062 DOUBLE NOT NULL,
     c063 TEXT NOT NULL,
     c064 INTEGER NOT NULL,
-    c065 REAL NOT NULL,
+    c065 DOUBLE NOT NULL,
     c066 TEXT NOT NULL,
     c067 INTEGER NOT NULL,
-    c068 REAL NOT NULL,
+    c068 DOUBLE NOT NULL,
     c069 TEXT NOT NULL,
     c070 INTEGER NOT NULL,
-    c071 REAL NOT NULL,
+    c071 DOUBLE NOT NULL,
     c072 TEXT NOT NULL,
     c073 INTEGER NOT NULL,
-    c074 REAL NOT NULL,
+    c074 DOUBLE NOT NULL,
     c075 TEXT NOT NULL,
     c076 INTEGER NOT NULL,
-    c077 REAL NOT NULL,
+    c077 DOUBLE NOT NULL,
     c078 TEXT NOT NULL,
     c079 INTEGER NOT NULL,
-    c080 REAL NOT NULL,
+    c080 DOUBLE NOT NULL,
     c081 TEXT NOT NULL,
     c082 INTEGER NOT NULL,
-    c083 REAL NOT NULL,
+    c083 DOUBLE NOT NULL,
     c084 TEXT NOT NULL,
     c085 INTEGER NOT NULL,
-    c086 REAL NOT NULL,
+    c086 DOUBLE NOT NULL,
     c087 TEXT NOT NULL,
     c088 INTEGER NOT NULL,
-    c089 REAL NOT NULL,
+    c089 DOUBLE NOT NULL,
     c090 TEXT NOT NULL,
     c091 INTEGER NOT NULL,
-    c092 REAL NOT NULL,
+    c092 DOUBLE NOT NULL,
     c093 TEXT NOT NULL,
     c094 INTEGER NOT NULL,
-    c095 REAL NOT NULL,
+    c095 DOUBLE NOT NULL,
     c096 TEXT NOT NULL,
     c097 INTEGER NOT NULL,
-    c098 REAL NOT NULL,
+    c098 DOUBLE NOT NULL,
     c099 TEXT NOT NULL,
     c100 INTEGER NOT NULL,
-    c101 REAL NOT NULL,
+    c101 DOUBLE NOT NULL,
     c102 TEXT NOT NULL,
     c103 INTEGER NOT NULL,
-    c104 REAL NOT NULL,
+    c104 DOUBLE NOT NULL,
     c105 TEXT NOT NULL,
     c106 INTEGER NOT NULL,
-    c107 REAL NOT NULL,
+    c107 DOUBLE NOT NULL,
     c108 TEXT NOT NULL,
     c109 INTEGER NOT NULL,
-    c110 REAL NOT NULL,
+    c110 DOUBLE NOT NULL,
     c111 TEXT NOT NULL,
     c112 INTEGER NOT NULL,
-    c113 REAL NOT NULL,
+    c113 DOUBLE NOT NULL,
     c114 TEXT NOT NULL,
     c115 INTEGER NOT NULL,
-    c116 REAL NOT NULL,
+    c116 DOUBLE NOT NULL,
     c117 TEXT NOT NULL,
     c118 INTEGER NOT NULL,
-    c119 REAL NOT NULL,
+    c119 DOUBLE NOT NULL,
     c120 TEXT NOT NULL,
     c121 INTEGER NOT NULL,
-    c122 REAL NOT NULL,
+    c122 DOUBLE NOT NULL,
     c123 TEXT NOT NULL,
     c124 INTEGER NOT NULL,
-    c125 REAL NOT NULL,
+    c125 DOUBLE NOT NULL,
     c126 TEXT NOT NULL,
     c127 INTEGER NOT NULL,
-    c128 REAL NOT NULL,
+    c128 DOUBLE NOT NULL,
     c129 TEXT NOT NULL,
     c130 INTEGER NOT NULL,
-    c131 REAL NOT NULL,
+    c131 DOUBLE NOT NULL,
     c132 TEXT NOT NULL,
     c133 INTEGER NOT NULL,
-    c134 REAL NOT NULL,
+    c134 DOUBLE NOT NULL,
     c135 TEXT NOT NULL,
     c136 INTEGER NOT NULL,
-    c137 REAL NOT NULL,
+    c137 DOUBLE NOT NULL,
     c138 TEXT NOT NULL,
     c139 INTEGER NOT NULL,
-    c140 REAL NOT NULL,
+    c140 DOUBLE NOT NULL,
     c141 TEXT NOT NULL,
     c142 INTEGER NOT NULL,
-    c143 REAL NOT NULL,
+    c143 DOUBLE NOT NULL,
     c144 TEXT NOT NULL,
     c145 INTEGER NOT NULL,
-    c146 REAL NOT NULL,
+    c146 DOUBLE NOT NULL,
     c147 TEXT NOT NULL,
     c148 INTEGER NOT NULL,
-    c149 REAL NOT NULL,
+    c149 DOUBLE NOT NULL,
     c150 TEXT NOT NULL,
     c151 INTEGER NOT NULL,
-    c152 REAL NOT NULL,
+    c152 DOUBLE NOT NULL,
     c153 TEXT NOT NULL,
     c154 INTEGER NOT NULL,
-    c155 REAL NOT NULL,
+    c155 DOUBLE NOT NULL,
     c156 TEXT NOT NULL,
     c157 INTEGER NOT NULL,
-    c158 REAL NOT NULL,
+    c158 DOUBLE NOT NULL,
     c159 TEXT NOT NULL,
     c160 INTEGER NOT NULL,
-    c161 REAL NOT NULL,
+    c161 DOUBLE NOT NULL,
     c162 TEXT NOT NULL,
     c163 INTEGER NOT NULL,
-    c164 REAL NOT NULL,
+    c164 DOUBLE NOT NULL,
     c165 TEXT NOT NULL,
     c166 INTEGER NOT NULL,
-    c167 REAL NOT NULL,
+    c167 DOUBLE NOT NULL,
     c168 TEXT NOT NULL,
     c169 INTEGER NOT NULL,
-    c170 REAL NOT NULL,
+    c170 DOUBLE NOT NULL,
     c171 TEXT NOT NULL,
     c172 INTEGER NOT NULL,
-    c173 REAL NOT NULL,
+    c173 DOUBLE NOT NULL,
     c174 TEXT NOT NULL,
     c175 INTEGER NOT NULL,
-    c176 REAL NOT NULL,
+    c176 DOUBLE NOT NULL,
     c177 TEXT NOT NULL,
     c178 INTEGER NOT NULL,
-    c179 REAL NOT NULL,
+    c179 DOUBLE NOT NULL,
     c180 TEXT NOT NULL,
     c181 INTEGER NOT NULL,
-    c182 REAL NOT NULL,
+    c182 DOUBLE NOT NULL,
     c183 TEXT NOT NULL,
     c184 INTEGER NOT NULL,
-    c185 REAL NOT NULL,
+    c185 DOUBLE NOT NULL,
     c186 TEXT NOT NULL,
     c187 INTEGER NOT NULL,
-    c188 REAL NOT NULL,
+    c188 DOUBLE NOT NULL,
     c189 TEXT NOT NULL,
     c190 INTEGER NOT NULL,
-    c191 REAL NOT NULL,
+    c191 DOUBLE NOT NULL,
     c192 TEXT NOT NULL,
     c193 INTEGER NOT NULL,
-    c194 REAL NOT NULL,
+    c194 DOUBLE NOT NULL,
     c195 TEXT NOT NULL,
     c196 INTEGER NOT NULL,
-    c197 REAL NOT NULL,
+    c197 DOUBLE NOT NULL,
     c198 TEXT NOT NULL,
     c199 INTEGER NOT NULL
 );
 
-INSERT INTO wide_metrics (c001, c002, c003, c004, c005, c006, c007, c008, c009, c010, c011, c012, c013, c014, c015, c016, c017, c018, c019, c020, c021, c022, c023, c024, c025, c026, c027, c028, c029, c030, c031, c032, c033, c034, c035, c036, c037, c038, c039, c040, c041, c042, c043, c044, c045, c046, c047, c048, c049, c050, c051, c052, c053, c054, c055, c056, c057, c058, c059, c060, c061, c062, c063, c064, c065, c066, c067, c068, c069, c070, c071, c072, c073, c074, c075, c076, c077, c078, c079, c080, c081, c082, c083, c084, c085, c086, c087, c088, c089, c090, c091, c092, c093, c094, c095, c096, c097, c098, c099, c100, c101, c102, c103, c104, c105, c106, c107, c108, c109, c110, c111, c112, c113, c114, c115, c116, c117, c118, c119, c120, c121, c122, c123, c124, c125, c126, c127, c128, c129, c130, c131, c132, c133, c134, c135, c136, c137, c138, c139, c140, c141, c142, c143, c144, c145, c146, c147, c148, c149, c150, c151, c152, c153, c154, c155, c156, c157, c158, c159, c160, c161, c162, c163, c164, c165, c166, c167, c168, c169, c170, c171, c172, c173, c174, c175, c176, c177, c178, c179, c180, c181, c182, c183, c184, c185, c186, c187, c188, c189, c190, c191, c192, c193, c194, c195, c196, c197, c198, c199)
-WITH RECURSIVE n(i) AS (
-    SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 25
-)
-SELECT i * 1 + 1,
+INSERT INTO wide_metrics
+SELECT i,
+       i * 1 + 1,
        i * 0.5 + 2,
        'c003-' || i,
        i * 4 + 1,
@@ -671,4 +668,157 @@ SELECT i * 1 + 1,
        i * 0.5 + 197,
        'c198-' || i,
        i * 199 + 1
-FROM n;
+FROM range(1, 26) AS n (i);
+
+-- Types only DuckDB has, for checking how the client renders them. Nested
+-- values hold NULLs at every level, since that is where a renderer slips.
+CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
+
+CREATE TABLE type_gallery (
+    id INTEGER PRIMARY KEY,
+    label TEXT NOT NULL,
+    int_list INTEGER[],
+    text_list VARCHAR[],
+    fixed_array INTEGER[3],
+    point STRUCT(x DOUBLE, y DOUBLE),
+    profile STRUCT(name VARCHAR, tags VARCHAR[], address STRUCT(city VARCHAR, zip VARCHAR)),
+    scores MAP(VARCHAR, INTEGER),
+    nested_map MAP(VARCHAR, INTEGER[]),
+    list_of_structs STRUCT(k VARCHAR, v INTEGER)[],
+    list_of_lists INTEGER[][],
+    current_mood mood,
+    uid UUID,
+    doc JSON,
+    huge HUGEINT,
+    uhuge UHUGEINT,
+    u8 UTINYINT,
+    u16 USMALLINT,
+    u32 UINTEGER,
+    u64 UBIGINT,
+    i8 TINYINT,
+    i16 SMALLINT,
+    dec_small DECIMAL(4, 1),
+    dec_wide DECIMAL(38, 10),
+    span INTERVAL,
+    ts_tz TIMESTAMPTZ,
+    ts_ns TIMESTAMP_NS,
+    ts_ms TIMESTAMP_MS,
+    ts_s TIMESTAMP_S,
+    clock TIME,
+    clock_tz TIMETZ,
+    day DATE,
+    raw BLOB,
+    flags BIT,
+    big VARINT,
+    ratio FLOAT,
+    precise DOUBLE
+);
+
+INSERT INTO type_gallery VALUES
+    (
+        1, 'typical',
+        [1, 2, 3], ['a', 'b'], [1, 2, 3],
+        {'x': 1.5, 'y': -2.5},
+        {'name': 'Ada', 'tags': ['founder', 'priority'], 'address': {'city': 'London', 'zip': 'N1'}},
+        MAP {'a': 1, 'b': 2},
+        MAP {'evens': [2, 4], 'odds': [1, 3]},
+        [{'k': 'one', 'v': 1}, {'k': 'two', 'v': 2}],
+        [[1, 2], [3], []],
+        'happy',
+        '018f1f6e-7c2a-7000-8000-000000000001',
+        '{"a":[1,2,{"b":null}]}',
+        170141183460469231731687303715884105727,
+        340282366920938463463374607431768211455,
+        255, 65535, 4294967295, 18446744073709551615,
+        -128, -32768,
+        -123.4,
+        1234567890123456789012345678.1234567890,
+        INTERVAL '1 year 2 months 3 days 04:05:06.789',
+        '2024-06-15 12:34:56.789012+02',
+        '2024-06-15 12:34:56.123456789',
+        '2024-06-15 12:34:56.123',
+        '2024-06-15 12:34:56',
+        '23:59:59.999999',
+        '12:34:56+05:30',
+        '2024-02-29',
+        '\x00\x01\xFE\xFF'::BLOB,
+        '101010011'::BIT,
+        123456789012345678901234567890::VARINT,
+        1.1,
+        0.1 + 0.2
+    ),
+    (
+        2, 'NULLs inside nested values',
+        [1, NULL, 3], [NULL, 'b'], [NULL, NULL, 3],
+        {'x': NULL, 'y': 2.0},
+        {'name': NULL, 'tags': [NULL, 'x'], 'address': {'city': NULL, 'zip': NULL}},
+        MAP {'a': NULL, 'b': 2},
+        MAP {'none': NULL, 'some': [NULL, 1]},
+        [{'k': NULL, 'v': 1}, NULL],
+        [[NULL], NULL, [1, NULL]],
+        'sad',
+        'ffffffff-ffff-ffff-ffff-ffffffffffff',
+        'null',
+        -170141183460469231731687303715884105728,
+        0,
+        0, 0, 0, 0,
+        127, 32767,
+        99.9,
+        -0.0000000001,
+        INTERVAL '-5 days',
+        '1970-01-01 00:00:00+00',
+        '1970-01-01 00:00:00.000000001',
+        '1970-01-01 00:00:00.001',
+        '1970-01-01 00:00:01',
+        '00:00:00',
+        '00:00:00+00',
+        '0001-01-01',
+        ''::BLOB,
+        '0'::BIT,
+        -123456789012345678901234567890::VARINT,
+        'NaN'::FLOAT,
+        'Infinity'::DOUBLE
+    ),
+    (
+        3, 'infinite dates',
+        [], [], NULL,
+        NULL, NULL, MAP {}, NULL, [], [[]],
+        'ok',
+        '00000000-0000-0000-0000-000000000000',
+        '"just a string"',
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        INTERVAL '0 seconds',
+        'infinity', '-infinity', 'infinity', '-infinity',
+        NULL, NULL,
+        'infinity',
+        NULL, NULL, NULL, '-Infinity'::FLOAT, '-Infinity'::DOUBLE
+    ),
+    (
+        4, 'minus infinity date',
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        NULL, NULL, NULL, NULL, NULL, NULL,
+        '-infinity',
+        NULL, NULL, NULL, NULL, NULL
+    );
+
+-- Two tables with no primary key, so the client's choice of row identity is
+-- visible: `tally` is keyless (made with CREATE TABLE AS, which carries no
+-- constraints), `contacts` has only a unique index to go on.
+CREATE TABLE tally AS
+SELECT i AS n, 'row-' || i AS label FROM range(1, 11) AS t (i);
+
+CREATE TABLE contacts (
+    email TEXT NOT NULL,
+    display_name TEXT
+);
+
+CREATE UNIQUE INDEX contacts_email_key ON contacts (email);
+
+INSERT INTO contacts VALUES
+    ('ada@example.test', 'Ada'),
+    ('grace@example.test', 'Grace'),
+    ('edsger@example.test', NULL);
+
+-- A plain secondary index, so the Structure tab has one that is not a key.
+CREATE INDEX events_account_id_idx ON events (account_id);

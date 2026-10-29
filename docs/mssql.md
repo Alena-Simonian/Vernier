@@ -1,6 +1,6 @@
 # SQL Server
 
-DBDelve speaks to SQL Server 2017 or later (and Azure SQL) over TDS, signing in
+Vernier speaks to SQL Server 2017 or later (and Azure SQL) over TDS, signing in
 with a SQL login: a username and a password. This page is what you need to know
 before filling in the form, and what behaves differently from the other
 engines.
@@ -26,7 +26,7 @@ give its port.
 The development container:
 
 ```text
-mssql://dbdelve:DBDelve_dev1@127.0.0.1:51433/dbdelve_dev
+mssql://vernier:Vernier_dev1@127.0.0.1:51433/vernier_dev
 ```
 
 ## TLS
@@ -58,40 +58,40 @@ whether or not encryption is tried again, so neither retries it.
   cancel signal, so Cancel stops a statement by closing its socket, and the
   server stops the batch when its client goes. That ends the session: an open
   transaction is rolled back and temporary tables and `SET` options are lost.
-  DBDelve reconnects straight away and the error says so. The statement timeout
+  Vernier reconnects straight away and the error says so. The statement timeout
   works the same way, since SQL Server has no server-side one, and it bounds
-  every round trip a run needs, including the ones DBDelve makes on its own
+  every round trip a run needs, including the ones Vernier makes on its own
   before and after your statement.
   Cancel never stops a catalog load, and a statement queued behind one, or
-  waiting for DBDelve to reconnect, is cancelled before it is sent rather than
+  waiting for Vernier to reconnect, is cancelled before it is sent rather than
   being made to run first. A Cancel
   that arrives after the statement already finished is reported as such.
-- **DBDelve's own SQL runs under its own session options, not yours.** A
+- **Vernier's own SQL runs under its own session options, not yours.** A
   preview, a grid edit or a catalog or structure query sets `XACT_ABORT ON`,
   `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON`, `ANSI_WARNINGS ON`,
   `IMPLICIT_TRANSACTIONS OFF`, `ROWCOUNT 0` and `DATEFORMAT ymd` for that one
   statement only, so whatever you `SET` yourself is exactly as you left it
-  afterwards. Your own SQL runs as you typed it, and the check DBDelve makes
+  afterwards. Your own SQL runs as you typed it, and the check Vernier makes
   before it (for the types below) compiles it under your options too; the one
-  thing DBDelve sets at login is `XACT_ABORT ON`, and `SET XACT_ABORT OFF` in
+  thing Vernier sets at login is `XACT_ABORT ON`, and `SET XACT_ABORT OFF` in
   your own SQL wins for the rest of the session.
-- **DBDelve only issues its own rollback for a transaction its own statement
+- **Vernier only issues its own rollback for a transaction its own statement
   opened**, never one you had running already. T-SQL has no nested
   transactions, though, so `XACT_ABORT` can still end a transaction you opened
   earlier when one of your own statements fails inside it; when that happens
   the error says so, rather than leaving you to notice it is gone.
 - **`sql_variant` and CLR-typed columns** (`geography`, `geometry`,
-  `hierarchyid`) **are read as text in DBDelve's own previews** —
+  `hierarchyid`) **are read as text in Vernier's own previews** —
   `CONVERT(nvarchar(max), …)` for a CLR type, `CAST(… AS nvarchar(4000))` for
   `sql_variant` — and are never an edit target. That rewrite is something
-  DBDelve does only to its own generated preview SQL, never to yours. A query
+  Vernier does only to its own generated preview SQL, never to yours. A query
   you write is refused before it runs if one of these types would be in its
   first result set, with a message telling you how to cast it; further into a
   multi-result-set query the driver still cannot decode it, fails partway
   through, and the connection is reset — the error says the transaction and
   any temp tables went with it.
-- **Identifiers DBDelve writes are double-quoted**, `"dbo"."accounts"`, not
-  bracketed. The SQL checker DBDelve runs before anything it generates does not
+- **Identifiers Vernier writes are double-quoted**, `"dbo"."accounts"`, not
+  bracketed. The SQL checker Vernier runs before anything it generates does not
   read brackets. Your own SQL can use either. If you turn `QUOTED_IDENTIFIER`
   off, double-quoted names become strings and sorting from a header click stops
   meaning anything.
@@ -106,14 +106,14 @@ whether or not encryption is tried again, so neither retries it.
 - **A line holding only `GO` separates batches, and it is never sent.** The
   statement under your cursor runs inside its whole batch. A selection has to
   hold exactly one batch; `GO` lines around it are dropped rather than sent. A
-  count on it, `GO 5`, is refused, because DBDelve runs a batch once. Format
+  count on it, `GO 5`, is refused, because Vernier runs a batch once. Format
   Query leaves `GO` lines and `[bracketed]` names as you wrote them.
   `CREATE`/`ALTER PROCEDURE`/`FUNCTION`/`TRIGGER` runs to the next `GO` or the
   end of the buffer, and a `BEGIN … END` or `BEGIN TRY … END CATCH` block runs
   whole, however many `;`s it holds; `[bracketed]` names are read as names
-  wherever DBDelve looks for a statement's boundaries.
+  wherever Vernier looks for a statement's boundaries.
 - **`USE` is moved back.** A profile is bound to one database, and everything
-  DBDelve writes names objects by schema alone. A run that switches database is
+  Vernier writes names objects by schema alone. A run that switches database is
   reported as an error and the session is switched back, even when the
   statement carrying the `USE` itself failed.
 - **Editing asks the server where a column came from**, with one extra round
@@ -124,13 +124,13 @@ whether or not encryption is tried again, so neither retries it.
   result but is never an edit target, though it can still locate its row if it
   is part of the key.
 - **Writes report the last statement's row count**, the way Postgres does:
-  DBDelve asks for it with a follow-up `SELECT @@ROWCOUNT`, since the driver
+  Vernier asks for it with a follow-up `SELECT @@ROWCOUNT`, since the driver
   keeps its own row-count tokens to itself. That, and the check before each
   statement, means `@@ROWCOUNT` and `@@ERROR` in your next run describe
-  DBDelve's queries, not your last statement (known limitation); read them in
+  Vernier's queries, not your last statement (known limitation); read them in
   the same batch as the statement they follow.
 - **A literal is spelled by the column's type**, in an edit or in the filter
-  bar alike. DBDelve writes `N'…'` for a Unicode or unknown-type column and
+  bar alike. Vernier writes `N'…'` for a Unicode or unknown-type column and
   for any value holding a non-ASCII character, plain `'…'` for an ASCII value
   going into a char, varchar, text, numeric or date column (a `datetime` or
   `smalldatetime` as `'2024-01-02T03:04:05.000'`, the form no `SET LANGUAGE`
@@ -155,17 +155,17 @@ whether or not encryption is tried again, so neither retries it.
   than nothing; an alias type the login cannot see falls back to showing its
   base type.
 - **Explain is not offered.** SQL Server's plans come from `SET SHOWPLAN_XML`,
-  a session switch rather than a prefix DBDelve could put on a copy of your
+  a session switch rather than a prefix Vernier could put on a copy of your
   statement.
 - **No regex filter.** SQL Server has none before 2025.
 - **`DECLARE`, `WAITFOR` and other statements the checker does not know** need
   Full, as on every engine.
 - **Read-only has no server-side backstop.** SQL Server has no session setting
-  that refuses writes, so Read-only refuses what DBDelve cannot parse rather
+  that refuses writes, so Read-only refuses what Vernier cannot parse rather
   than offering to run it once.
 - **An error from inside a procedure, trigger or function points at nothing in
   your buffer.** The line SQL Server reports is the routine's own, not your
-  statement's, so DBDelve does not place it in the editor.
+  statement's, so Vernier does not place it in the editor.
 - **`money` is exact below about 900 billion**; the driver hands it over as a
   floating-point number. A nullable `smallmoney` column shows as `money`, and
   an empty or all-NULL nullable `smalldatetime` column shows as `datetime`,

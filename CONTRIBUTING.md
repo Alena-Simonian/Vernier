@@ -1,4 +1,4 @@
-# Contributing to DBDelve
+# Contributing to Vernier
 
 Thanks for looking at this. Here's how to get set up and what to check before sending a PR.
 
@@ -38,32 +38,32 @@ cargo run
 `compose.yaml`). It also starts two SSH bastions for testing tunnels;
 `dev/ssh/setup.sh` generates a key and an `ssh_config` for them into
 `dev/ssh/.generated/` (gitignored). `compose.yaml` pins the project name to
-`dbdelve`, so `docker compose up` from a git worktree recreates the main
+`vernier`, so `docker compose up` from a git worktree recreates the main
 checkout's stack with the `./dev` mounts and the bastion key taken from that
 worktree; after removing the worktree, run `docker compose up -d --wait` and
-`dev/ssh/setup.sh` from the main checkout again. With nothing configured, DBDelve opens the
+`dev/ssh/setup.sh` from the main checkout again. With nothing configured, Vernier opens the
 connection form; the repository-owned databases accept:
 
 ```text
-postgresql://dbdelve:dbdelve@127.0.0.1:55432/dbdelve_dev
-mysql://dbdelve:dbdelve@127.0.0.1:53306/dbdelve_dev
-mariadb://dbdelve:dbdelve@127.0.0.1:53307/dbdelve_dev
-mongodb://dbdelve:dbdelve@127.0.0.1:57017/dbdelve_dev
-redis://dbdelve:dbdelve@127.0.0.1:56379/0
-clickhouse://dbdelve:dbdelve@127.0.0.1:58123/dbdelve_dev?sslmode=disable
+postgresql://vernier:vernier@127.0.0.1:55432/vernier_dev
+mysql://vernier:vernier@127.0.0.1:53306/vernier_dev
+mariadb://vernier:vernier@127.0.0.1:53307/vernier_dev
+mongodb://vernier:vernier@127.0.0.1:57017/vernier_dev
+redis://vernier:vernier@127.0.0.1:56379/0
+clickhouse://vernier:vernier@127.0.0.1:58123/vernier_dev?sslmode=disable
 ```
 
 The MongoDB service is `mongo` in `compose.yaml`, on port 57017; its seed is
-`dev/mongo/init/001-dbdelve-demo.js`, which `mongod` runs only on an empty data
+`dev/mongo/init/001-vernier-demo.js`, which `mongod` runs only on an empty data
 volume. After editing it, `docker compose down -v` to apply it.
 
 The Redis service is `redis` in `compose.yaml` (the `redis:8` image, which ships
-JSON and Search), on port 56379, moved with `DBDELVE_REDIS_PORT`. Its ACL user
+JSON and Search), on port 56379, moved with `VERNIER_REDIS_PORT`. Its ACL user
 and seed are in `dev/redis/`; nothing is persisted, so every start seeds afresh
 and the healthcheck passes only once the seed finished.
 
 The ClickHouse service is `clickhouse` in `compose.yaml` (the `clickhouse-server:26.8`
-image built from `dev/clickhouse/`), on port 58123, moved with `DBDELVE_CLICKHOUSE_PORT`.
+image built from `dev/clickhouse/`), on port 58123, moved with `VERNIER_CLICKHOUSE_PORT`.
 The seed in `dev/clickhouse/init/` is baked into the image and runs only on an empty data
 volume, ending with `type_gallery`, whose rows the healthcheck counts. Its HTTP bodies
 recorded for the unit tests are in `dev/clickhouse/fixtures/`.
@@ -72,7 +72,7 @@ SQLite has no server to start — build the file once and point the form at its
 absolute path:
 
 ```sh
-sqlite3 dev/dbdelve_dev.db < dev/sqlite/001-dbdelve-demo.sql
+sqlite3 dev/vernier_dev.db < dev/sqlite/001-vernier-demo.sql
 ```
 
 DuckDB is the same: build the file once and give the form its absolute path.
@@ -80,7 +80,7 @@ The `duckdb` CLI comes from `brew install duckdb` or [duckdb.org](https://duckdb
 The seed expects a fresh file, so remove the old one first:
 
 ```sh
-rm -f dev/dbdelve_dev.duckdb && duckdb dev/dbdelve_dev.duckdb < dev/duckdb/001-dbdelve-demo.sql
+rm -f dev/vernier_dev.duckdb && duckdb dev/vernier_dev.duckdb < dev/duckdb/001-vernier-demo.sql
 ```
 
 ## Running tests
@@ -98,19 +98,19 @@ tests at all of them, exactly as CI does it (`.github/workflows/ci.yml`):
 
 ```sh
 docker compose up -d --wait
-sqlite3 dev/dbdelve_dev.db < dev/sqlite/001-dbdelve-demo.sql
+sqlite3 dev/vernier_dev.db < dev/sqlite/001-vernier-demo.sql
 
 export PGHOST=127.0.0.1
 export PGPORT=55432
-export PGDATABASE=dbdelve_dev
-export PGUSER=dbdelve
-export PGPASSWORD=dbdelve
-export dbdelve_MYSQL_URL=mysql://dbdelve:dbdelve@127.0.0.1:53306/dbdelve_dev
-export dbdelve_MARIADB_URL=mariadb://dbdelve:dbdelve@127.0.0.1:53307/dbdelve_dev
-export dbdelve_MONGO_URL=mongodb://dbdelve:dbdelve@127.0.0.1:57017/dbdelve_dev
-export dbdelve_REDIS_URL=redis://dbdelve:dbdelve@127.0.0.1:56379/0
-export dbdelve_CLICKHOUSE_URL='clickhouse://dbdelve:dbdelve@127.0.0.1:58123/dbdelve_dev?sslmode=disable'
-export dbdelve_SQLITE_PATH=$(pwd)/dev/dbdelve_dev.db
+export PGDATABASE=vernier_dev
+export PGUSER=vernier
+export PGPASSWORD=vernier
+export vernier_MYSQL_URL=mysql://vernier:vernier@127.0.0.1:53306/vernier_dev
+export vernier_MARIADB_URL=mariadb://vernier:vernier@127.0.0.1:53307/vernier_dev
+export vernier_MONGO_URL=mongodb://vernier:vernier@127.0.0.1:57017/vernier_dev
+export vernier_REDIS_URL=redis://vernier:vernier@127.0.0.1:56379/0
+export vernier_CLICKHOUSE_URL='clickhouse://vernier:vernier@127.0.0.1:58123/vernier_dev?sslmode=disable'
+export vernier_SQLITE_PATH=$(pwd)/dev/vernier_dev.db
 
 cargo test -- --include-ignored
 ```
@@ -120,14 +120,14 @@ A MySQL or MariaDB container reporting healthy does not mean its seed applied �
 `live_the_development_database_is_fully_seeded` first rather than assuming
 your change broke something.
 
-The MongoDB live tests are in `src/db/mongo.rs` and read `dbdelve_MONGO_URL`;
+The MongoDB live tests are in `src/db/mongo.rs` and read `vernier_MONGO_URL`;
 run them alone with:
 
 ```sh
 cargo test db::mongo -- --include-ignored
 ```
 
-The Redis live tests are in `src/db/redis.rs` and read `dbdelve_REDIS_URL`;
+The Redis live tests are in `src/db/redis.rs` and read `vernier_REDIS_URL`;
 run them alone with `cargo test db::redis -- --include-ignored`.
 
 The SSH tunnel's own tests (`live_ssh_*`, in `ssh.rs` and each engine module)
@@ -136,17 +136,17 @@ need the dev bastions `docker compose up` already started, plus the config
 
 ```sh
 dev/ssh/setup.sh
-export dbdelve_SSH_CONFIG=$(pwd)/dev/ssh/.generated/ssh_config
+export vernier_SSH_CONFIG=$(pwd)/dev/ssh/.generated/ssh_config
 cargo test -- --include-ignored
 ```
 
-`dbdelve_SSH_CONFIG` is what points the tunnel at that generated config (`ssh
+`vernier_SSH_CONFIG` is what points the tunnel at that generated config (`ssh
 -F`) instead of your real `~/.ssh/config`; without it, `live_ssh_*` tests
 panic asking for it rather than silently skipping.
 
 ## Load testing
 
-The seed keeps `events` narrow. To see how far DBDelve gets with a wide one,
+The seed keeps `events` narrow. To see how far Vernier gets with a wide one,
 `dev/load.sh` rebuilds `events` in the running Postgres: the same rows, key and
 indexes, plus about a hundred columns of every type Postgres has, several JSON
 columns (up to a couple of KB a row) and geometry.
@@ -180,14 +180,14 @@ catch anything platform-specific.
 
 ## Code conventions
 
-`AGENTS.md` is the source of truth for how DBDelve is built; read it rather
+`AGENTS.md` is the source of truth for how Vernier is built; read it rather
 than relying on this summary. A few of its rules that come up often:
 
 - **Engine dispatch stays inside `src/db/`.** It's a closed enum, not a
   trait; nothing above `src/db/` branches on which engine is connected, and
   the grid never sees a driver type (`postgres::Row`, `mysql::Value`,
   `rusqlite::ValueRef`) — only rendered strings and type tags.
-- **DBDelve never rewrites SQL behind the user's back.** No silent `LIMIT`,
+- **Vernier never rewrites SQL behind the user's back.** No silent `LIMIT`,
   no reformatting on execute, nothing on a statement the user didn't ask it
   to change. See "Hard rules" in `AGENTS.md` for the full list and the
   exceptions (sort clicks, the generated-write gate).

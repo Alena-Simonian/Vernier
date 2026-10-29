@@ -1,4 +1,4 @@
-// dbdelve patch: backdrop blur, ported verbatim from zui (zeronsh/zui@361ff20).
+// vernier patch: backdrop blur, ported verbatim from zui (zeronsh/zui@361ff20).
 
 //! Gaussian weights shared by every pixel of a backdrop blur pass.
 

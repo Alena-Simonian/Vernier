@@ -10,7 +10,7 @@ mkdir -p "$gen_dir"
 
 key="$gen_dir/id_ed25519"
 if [ ! -f "$key" ]; then
-    ssh-keygen -t ed25519 -N "" -f "$key" -C dbdelve-dev-bastion -q
+    ssh-keygen -t ed25519 -N "" -f "$key" -C vernier-dev-bastion -q
 fi
 chmod 600 "$key"
 
@@ -22,7 +22,7 @@ cp "$key.pub" "$gen_dir/authorized_keys"
 chmod 644 "$gen_dir/authorized_keys"
 
 abs_dir="$(pwd)/$gen_dir"
-port="${DBDELVE_SSH_PORT:-52222}"
+port="${VERNIER_SSH_PORT:-52222}"
 
 # The bastion's host key changes every time its container is recreated
 # (nothing persists /etc/ssh), so a known_hosts entry from a previous run
@@ -32,7 +32,7 @@ port="${DBDELVE_SSH_PORT:-52222}"
 : > "$gen_dir/known_hosts"
 
 cat > "$gen_dir/ssh_config" <<EOF
-Host dbdelve-bastion
+Host vernier-bastion
     HostName 127.0.0.1
     Port $port
     User dev
@@ -41,12 +41,12 @@ Host dbdelve-bastion
     UserKnownHostsFile $abs_dir/known_hosts
     StrictHostKeyChecking accept-new
 
-Host dbdelve-inner
+Host vernier-inner
     HostName bastion2
     User dev
     IdentityFile $abs_dir/id_ed25519
     IdentitiesOnly yes
     UserKnownHostsFile $abs_dir/known_hosts
     StrictHostKeyChecking accept-new
-    ProxyJump dbdelve-bastion
+    ProxyJump vernier-bastion
 EOF

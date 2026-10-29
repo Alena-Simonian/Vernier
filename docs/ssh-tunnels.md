@@ -3,7 +3,7 @@
 Postgres, MySQL and SQL Server profiles can connect through a local port
 forward run by your system `ssh`, so `~/.ssh/config` (aliases, `ProxyJump`,
 `IdentityFile`, `User`), ssh-agent, an agent like 1Password's or Secretive's,
-and a hardware key all work exactly as they do in a terminal. DBDelve ships no
+and a hardware key all work exactly as they do in a terminal. Vernier ships no
 SSH client of its own and never reads a private key directly.
 
 ## Setting it up
@@ -35,22 +35,22 @@ case is the database's real hostname, or an address only that host's network
 can reach.
 
 The tunnel opens when the profile connects and stays open for as long as the
-connection does; closing the connection, quitting DBDelve, or a crash all end
+connection does; closing the connection, quitting Vernier, or a crash all end
 the `ssh` process with it, so nothing is left listening behind you.
 
 ### Known-hosts files
 
-Packagers can set `DBDELVE_SSH_KNOWN_HOSTS` to an OpenSSH `UserKnownHostsFile`
+Packagers can set `VERNIER_SSH_KNOWN_HOSTS` to an OpenSSH `UserKnownHostsFile`
 value: a space-separated list, with double quotes around paths containing
 spaces. Unset or blank uses the known-hosts files from SSH's configuration.
 For example:
 
 ```sh
-export DBDELVE_SSH_KNOWN_HOSTS='"/path/to/app-data/known_hosts" "~/.ssh/known_hosts" "~/.ssh/known_hosts2"'
+export VERNIER_SSH_KNOWN_HOSTS='"/path/to/app-data/known_hosts" "~/.ssh/known_hosts" "~/.ssh/known_hosts2"'
 ```
 
 To record a new host, the first file must be writable if it exists;
-otherwise its parent directory must already exist and be writable. DBDelve
+otherwise its parent directory must already exist and be writable. Vernier
 refuses the connection if a newly accepted host key cannot be saved. Keep
 existing trust files in the list, even if they are read-only. This overrides
 `UserKnownHostsFile` for the destination host. A `ProxyJump` host uses its own
@@ -66,11 +66,11 @@ SSH configuration.
 - TLS still verifies the database's real hostname, not the tunnel's local
   address, on Postgres and SQL Server — `sslmode=verify-full` works through a
   tunnel the same as it does direct.
-- DBDelve uses `accept-new` whenever SSH reports `StrictHostKeyChecking=ask`,
+- Vernier uses `accept-new` whenever SSH reports `StrictHostKeyChecking=ask`,
   including an explicitly configured `ask`. Other host-key checking settings
   are left unchanged.
 
-On Windows, DBDelve uses the `ssh` on your `PATH`, or Windows' built-in
+On Windows, Vernier uses the `ssh` on your `PATH`, or Windows' built-in
 OpenSSH client if none is there. That build's `ssh-agent` service is off by
 default — `Set-Service ssh-agent -StartupType Automatic; Start-Service
 ssh-agent` before `ssh-add`ing a key, or use an unencrypted key file instead.
@@ -87,7 +87,7 @@ ssh-agent` before `ssh-add`ing a key, or use an unencrypted key file instead.
   tunnel that's the local forward, not the server — so `verify-full` there
   could only ever check the wrong name. Use `verify-ca` instead, which still
   checks the certificate chain, just not the hostname.
-- **No SOCKS or dynamic forwarding.** DBDelve opens one forward to one
+- **No SOCKS or dynamic forwarding.** Vernier opens one forward to one
   database; it isn't a general-purpose proxy.
 - **Not shared between profiles.** Two profiles through the same bastion open
   two separate `ssh` processes.

@@ -366,7 +366,7 @@ impl Workspace {
                                     .justify_center(),
                                 at(Part::Greeting),
                             )
-                            .child("Welcome to DBDelve"),
+                            .child("Welcome to Vernier"),
                         )
                     }),
             )

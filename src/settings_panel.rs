@@ -81,16 +81,16 @@ impl SettingsTab {
         match self {
             Self::General => {
                 "How much a query brings back, how a header click sorts, and \
-                 whether DBDelve looks for a new release."
+                 whether Vernier looks for a new release."
             }
             Self::Appearance => {
-                "What DBDelve looks like, and how much of the desktop shows \
+                "What Vernier looks like, and how much of the desktop shows \
                  through it."
             }
             Self::Fonts => "The chrome, the editor and the grid each have their own face and size.",
             Self::Keyboard => {
                 "Every action you can bind. A change takes effect the next \
-                 time DBDelve starts."
+                 time Vernier starts."
             }
         }
     }

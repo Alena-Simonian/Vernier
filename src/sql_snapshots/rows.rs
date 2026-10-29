@@ -328,7 +328,7 @@ fn single_inserts_per_engine() {
         ));
     }
     for (case, table, columns, types, ok) in cases {
-        let text = sql::insert_row(engine, "dbdelve_dev", table, &columns, types);
+        let text = sql::insert_row(engine, "vernier_dev", table, &columns, types);
         outcome(&mut out, engine, &format!("mongo {case}"), text, ok);
     }
 
@@ -657,7 +657,7 @@ fn deletes_per_engine() {
             &mut out,
             engine,
             &format!("mongo {case}"),
-            "dbdelve_dev",
+            "vernier_dev",
             "accounts",
             &keys,
             &types,

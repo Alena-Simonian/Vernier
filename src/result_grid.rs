@@ -239,7 +239,7 @@ pub struct ResultGrid {
     /// memory to break ties by and to return to when its last key is clicked
     /// away. Empty until the first such sort, which is every row where it was.
     fetched: Vec<usize>,
-    /// The cell a keystroke acts on. dbdelve's, not the library's: gpui-component
+    /// The cell a keystroke acts on. vernier's, not the library's: gpui-component
     /// tracks a selected row *or* a selected column as mutually exclusive
     /// modes and never a cell, so a coordinate has to be assembled here or
     /// `Enter` has no target. A click sets it outright; the library's arrow
@@ -342,7 +342,7 @@ pub struct ResultGrid {
 }
 
 /// What a pending edit will write. Three states rather than two, because both
-/// keywords are writes dbdelve cannot spell as a value: `'NULL'` and
+/// keywords are writes vernier cannot spell as a value: `'NULL'` and
 /// `'DEFAULT'` are the words, and the column's own default is a thing only the
 /// server knows.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -468,7 +468,7 @@ impl ResultGrid {
                     .max_width(px(f32::MAX))
                     .resizable(true)
                     .movable(false)
-                    // The cell padding is dbdelve's, applied in `render_td` and
+                    // The cell padding is vernier's, applied in `render_td` and
                     // `render_th`. Taking the library's as well indents every
                     // value twice and leaves a column's width unknowable here.
                     .p_0()
@@ -1990,7 +1990,7 @@ impl ResultGrid {
     ///
     /// A row whose key is not fully readable is dropped rather than guessed at:
     /// a `NULL` in a key column, or a key column the result set does not carry,
-    /// leaves dbdelve unable to name the row.
+    /// leaves vernier unable to name the row.
     pub fn pending_updates(&self) -> Vec<PendingRow> {
         let Some(edit) = &self.result.edit else {
             return Vec::new();
@@ -2148,7 +2148,7 @@ impl ResultGrid {
 /// One column of one row, for the inspector panel.
 pub struct Field {
     pub name: SharedString,
-    /// The server's own name for the column's type, when dbdelve could learn it
+    /// The server's own name for the column's type, when vernier could learn it
     /// without running the statement twice.
     pub data_type: Option<SharedString>,
     pub value: Option<SharedString>,
@@ -3285,7 +3285,7 @@ pub(crate) fn new_grid(
 
     // The library's arrow keys move its own selection, which is a row or a
     // column and never a cell. Folded into the active cell here, they move the
-    // ring instead -- so every grid is navigable by keyboard, and dbdelve needs
+    // ring instead -- so every grid is navigable by keyboard, and vernier needs
     // no arrow binding competing with the library's own actions.
     //
     // Hooked in the constructor because every relation tab builds its grid
@@ -3811,7 +3811,7 @@ mod tests {
     #[test]
     fn a_row_offers_its_whole_key_or_nothing_at_all() {
         // The same condition that makes a cell editable, because it is the same
-        // question: can dbdelve name this row.
+        // question: can vernier name this row.
         let grid = editable_grid();
         assert_eq!(
             grid.row_key(1),
@@ -3824,7 +3824,7 @@ mod tests {
         );
         // A row index can outlive the rows it was taken from.
         assert_eq!(grid.row_key(9), None);
-        // And a result dbdelve cannot trace to one table has no key anywhere.
+        // And a result vernier cannot trace to one table has no key anywhere.
         assert_eq!(grid_of(&[Some("x")]).row_key(0), None);
     }
 
@@ -4134,7 +4134,7 @@ mod tests {
                     vec!["int", "long"],
                 ],
                 edit: Some(EditTarget {
-                    schema: "dbdelve_dev".into(),
+                    schema: "vernier_dev".into(),
                     table: "mixed_shapes".into(),
                     columns: vec![Some("_id".into()), Some("value".into())],
                     keys: vec![0],
@@ -4332,7 +4332,7 @@ mod tests {
     }
 
     #[test]
-    fn a_row_dbdelve_cannot_name_produces_no_statement() {
+    fn a_row_vernier_cannot_name_produces_no_statement() {
         // A NULL key value leaves no predicate to write, and a row updated by
         // guesswork is the failure this whole feature is built to avoid.
         let mut grid = ResultGrid::new(
@@ -4619,7 +4619,7 @@ mod tests {
 
     #[test]
     fn a_staged_default_reaches_the_update_as_the_keyword() {
-        // The one value dbdelve cannot write as a literal: what the column's
+        // The one value vernier cannot write as a literal: what the column's
         // default resolves to is the server's answer, so the statement has to
         // carry the word and let the server give it.
         let mut grid = editable_grid();
@@ -4637,7 +4637,7 @@ mod tests {
         );
         // The gate has to take it, the way it takes `SET x = NULL`. If the
         // grammar ever stops reading the keyword as part of an `update`, the
-        // menu entry becomes a statement dbdelve refuses to run.
+        // menu entry becomes a statement vernier refuses to run.
         assert!(
             crate::sql::is_generated_write(&batch),
             "{batch} was refused"
@@ -5759,7 +5759,7 @@ mod tests {
         );
         // A NULL has to stay absent rather than becoming the word for one.
         assert!(fields[1].value.is_none());
-        // A type dbdelve could not learn is shown as nothing, never as a guess.
+        // A type vernier could not learn is shown as nothing, never as a guess.
         assert!(fields[1].data_type.is_none());
         // A selection can outlive the rows it was made against.
         assert!(grid.fields(4).is_empty());

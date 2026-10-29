@@ -178,7 +178,7 @@ source: src/sql_snapshots.rs
   = write_on=true select=false classify=ReadWrite [] gate ro=Some(Upgrade(ReadWrite)) rw=None full=None
 
 [redis] keys other table
-  error: |other is not a grid DBDelve writes to.|
+  error: |other is not a grid Vernier writes to.|
 
 [redis] mixed families
   |HSET h f v|

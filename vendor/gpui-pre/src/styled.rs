@@ -748,7 +748,7 @@ pub trait Styled: Sized {
         self
     }
 
-    /// dbdelve patch: frosts whatever is painted beneath this element, blurred
+    /// vernier patch: frosts whatever is painted beneath this element, blurred
     /// with a gaussian of this radius (the sigma) inside its rounded corners.
     /// Pair it with a translucent background, through which the blur shows;
     /// every renderer (Metal, DirectX, wgpu) draws it.

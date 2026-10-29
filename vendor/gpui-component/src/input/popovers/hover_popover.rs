@@ -168,7 +168,7 @@ impl Element for Popover {
                 .p_1()
                 .text_xs()
                 .popover_style(cx)
-                // dbdelve patch: no shadow under frost (see `popover_style`).
+                // vernier patch: no shadow under frost (see `popover_style`).
                 .when(!popover_frosted(cx), |this| this.shadow_md())
                 .max_w(max_width)
                 .max_h(max_height)

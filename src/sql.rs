@@ -225,11 +225,11 @@ pub(crate) fn split_reads(
         .collect()
 }
 
-/// One key of an `ORDER BY`, as dbdelve reads and writes it.
+/// One key of an `ORDER BY`, as vernier reads and writes it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SortKey {
     /// The key exactly as it appears in the statement — `"created_at"`, `3`,
-    /// `lower(name)`. Kept verbatim, so a key dbdelve did not write survives a
+    /// `lower(name)`. Kept verbatim, so a key vernier did not write survives a
     /// click on some other column.
     pub expression: String,
     pub ascending: bool,
@@ -253,7 +253,7 @@ impl SortKey {
 }
 
 /// The keys of a statement's `ORDER BY`, in order. `Some(empty)` is a statement
-/// that could carry one and does not; `None` is a statement dbdelve cannot read
+/// that could carry one and does not; `None` is a statement vernier cannot read
 /// well enough to say without guessing.
 pub fn order_by(engine: Engine, statement: &str) -> Option<Vec<SortKey>> {
     match engine.syntax() {
@@ -300,7 +300,7 @@ pub fn order_by(engine: Engine, statement: &str) -> Option<Vec<SortKey>> {
 /// a `LIMIT` is a syntax error, and a limit that applies *before* the sort
 /// would order one arbitrary page of the table instead of the table.
 ///
-/// `None` when dbdelve cannot see where the clause goes — a statement it cannot
+/// `None` when vernier cannot see where the clause goes — a statement it cannot
 /// parse cleanly, one with no `FROM`, or one that is not a query. Nothing is
 /// guessed at, because the alternative is handing the server a statement the
 /// user did not write and cannot read.
@@ -497,7 +497,7 @@ pub fn update_row(
 /// edited.
 ///
 /// An error on an empty list. The alternative is `INSERT INTO t DEFAULT
-/// VALUES`, a statement nobody has asked dbdelve for.
+/// VALUES`, a statement nobody has asked vernier for.
 pub fn insert_row(
     engine: Engine,
     schema: &str,
@@ -778,12 +778,12 @@ fn sql_match(spec: &EngineSpec, row: Match, types: &[(String, String)]) -> Optio
         .map(|terms| terms.join(" AND "))
 }
 
-/// Whether `sql` is a statement dbdelve could have written: one or more `UPDATE`s,
+/// Whether `sql` is a statement vernier could have written: one or more `UPDATE`s,
 /// a single `INSERT` of literals, a single `DELETE` naming one row, or a lone
 /// transaction bracket, and nothing else at all.
 ///
-/// The one gate every dbdelve-generated statement passes before anything runs,
-/// and the code half of hard rule 1 — dbdelve never writes a `DROP` or a
+/// The one gate every vernier-generated statement passes before anything runs,
+/// and the code half of hard rule 1 — vernier never writes a `DROP` or a
 /// `TRUNCATE`, whatever the user asked for, and writes a `DELETE` only as a
 /// conjunction of equalities over distinct, unqualified columns. A whitelist,
 /// because a blocklist of keywords is only a list of the spellings someone
@@ -839,7 +839,7 @@ pub(crate) fn generated_write(spec: &SqlSpec, sql: &str) -> bool {
     };
 
     // Comments are tree-sitter extras and land at the root too, so anything
-    // that is not a statement here is something dbdelve did not generate.
+    // that is not a statement here is something vernier did not generate.
     let kinds: Vec<&str> = statements
         .iter()
         .map(|statement| match statement.kind() == "statement" {
@@ -849,7 +849,7 @@ pub(crate) fn generated_write(spec: &SqlSpec, sql: &str) -> bool {
         .collect();
 
     // The one place a `delete` node is tolerated, and only for the shape read
-    // back out of the tree rather than trusted because dbdelve wrote it.
+    // back out of the tree rather than trusted because vernier wrote it.
     if kinds == ["delete"] {
         return delete_key_columns(spec, sql).is_some();
     }
@@ -883,7 +883,7 @@ pub(crate) fn generated_write(spec: &SqlSpec, sql: &str) -> bool {
 /// escaped quote, or anything else the server's lexer may read otherwise than
 /// sqlparser's tokenizer ([`misread`]). The tree-sitter grammar the gate reads
 /// knows neither nested comments nor backslash escapes in names, which the
-/// server has, and DBDelve writes no comment and no escaped quote in a name.
+/// server has, and Vernier writes no comment and no escaped quote in a name.
 fn as_written<'sql>(spec: &SqlSpec, sql: &'sql str) -> Option<Cow<'sql, str>> {
     if spec.parser_dialect != ParserDialect::ClickHouse {
         return Some(Cow::Borrowed(sql));
@@ -943,7 +943,7 @@ fn alter_update_as_update(spec: &SqlSpec, statement: &str) -> Option<String> {
 }
 
 /// Whether `sql` is one lone `BEGIN`, `BEGIN TRANSACTION`, `COMMIT` or
-/// `ROLLBACK`, spelled as dbdelve writes it: the brackets of an import's
+/// `ROLLBACK`, spelled as vernier writes it: the brackets of an import's
 /// transaction, which spans submissions on a connection of the import's own.
 /// Compared as text, so a bracket is never admitted beside anything else.
 pub(crate) fn is_transaction_bracket(sql: &str) -> bool {
@@ -956,7 +956,7 @@ pub(crate) fn is_transaction_bracket(sql: &str) -> bool {
 /// of literals, ending in nothing or in Import Rows' fixed skip clause.
 ///
 /// No subquery, function call, expression or `SELECT` source, because a value
-/// that computes something is a value dbdelve did not write. The skip clause is
+/// that computes something is a value vernier did not write. The skip clause is
 /// compared as text as well as read from the tree: `ON CONFLICT (a) DO NOTHING`
 /// and `ON DUPLICATE KEY UPDATE a = VALUES(a)` are real clauses nothing
 /// generates.
@@ -1139,14 +1139,14 @@ pub fn row_guard(engine: Engine, statement: &str) -> Option<String> {
     is_generated_select(engine, &guard).then_some(guard)
 }
 
-/// Whether `sql` is a `SELECT` dbdelve could have written: exactly one root
+/// Whether `sql` is a `SELECT` vernier could have written: exactly one root
 /// statement, a query, with nothing destructive anywhere under it.
 ///
 /// The filter bar is a trust boundary. Everywhere else a statement is either
-/// wholly the user's or wholly dbdelve's; a filter is the user's text spliced
-/// into dbdelve's statement, so this is what makes `id = 1; DROP TABLE t`
+/// wholly the user's or wholly vernier's; a filter is the user's text spliced
+/// into vernier's statement, so this is what makes `id = 1; DROP TABLE t`
 /// structurally impossible rather than merely unlikely. It also guards the
-/// filters dbdelve writes for itself.
+/// filters vernier writes for itself.
 ///
 /// Not the second gate `AGENTS.md` rule 2 forbids. That rule governs the one
 /// path by which the grid writes, and `is_generated_write` remains its only
@@ -1169,7 +1169,7 @@ pub fn is_generated_select(engine: Engine, sql: &str) -> bool {
     let root = tree.root_node();
     let mut cursor = root.walk();
     // Comments are tree-sitter extras and land at the root too, so anything
-    // that is not the one statement is something dbdelve did not generate.
+    // that is not the one statement is something vernier did not generate.
     let children: Vec<_> = root.named_children(&mut cursor).collect();
     let [statement] = children.as_slice() else {
         return false;
@@ -1452,7 +1452,7 @@ fn row_columns(spec: &SqlSpec, predicate: Node, sql: &str) -> Option<Vec<String>
     Some(columns)
 }
 
-/// A column named twice is a predicate dbdelve never writes, and reading it as
+/// A column named twice is a predicate vernier never writes, and reading it as
 /// a one-column key would call a half-matched composite key a whole one.
 fn distinct(columns: &[String]) -> Option<()> {
     let unique = columns.iter().collect::<std::collections::HashSet<_>>();
@@ -2113,7 +2113,7 @@ pub(crate) fn one_batch(engine: Engine, sql: &str) -> Result<&str, String> {
         .filter_map(|batch| trim_range(sql, batch));
     match (batches.next(), batches.next()) {
         (_, Some(_)) => Err("The selection holds more than one batch separated by GO, \
-             and dbdelve sends one batch at a time."
+             and vernier sends one batch at a time."
             .into()),
         (batch, None) => Ok(batch.map_or("", |batch| &sql[batch])),
     }
@@ -2151,7 +2151,7 @@ fn repeats(count: u64) -> Result<(), String> {
     match count {
         1 => Ok(()),
         _ => Err(format!(
-            "GO {count} repeats its batch, and dbdelve runs a batch once."
+            "GO {count} repeats its batch, and Vernier runs a batch once."
         )),
     }
 }
@@ -2163,12 +2163,12 @@ fn repeats(count: u64) -> Result<(), String> {
 /// runs one submission as a single implicit transaction and needs nothing;
 /// MySQL and SQLite commit every statement on its own, so a batch of more than
 /// one is bracketed — in the statement text itself, where the user can read,
-/// edit and undo it, because dbdelve does not open a transaction behind anyone's
+/// edit and undo it, because vernier does not open a transaction behind anyone's
 /// back.
 ///
 /// An error when there is nothing to apply, and an error — rather than a
 /// shorter batch — when any one row cannot be written: a partial apply is not
-/// the change the user made, and dbdelve would have no way to say which part of
+/// the change the user made, and vernier would have no way to say which part of
 /// it ran.
 pub(crate) fn update_batch(engine: Engine, rows: &[PendingRow]) -> Result<String, String> {
     match engine.syntax() {
@@ -2218,7 +2218,7 @@ pub(crate) fn sql_update_batch(spec: &EngineSpec, rows: &[PendingRow]) -> Result
         .collect();
 
     let batch = statements
-        .ok_or("dbdelve cannot name an edited row by its primary key.")?
+        .ok_or("Vernier cannot name an edited row by its primary key.")?
         .join("\n");
     let bracket = spec.sql.transaction_opening().filter(|_| rows.len() > 1);
     Ok(match bracket {
@@ -2233,7 +2233,7 @@ pub(crate) fn sql_update_batch(spec: &EngineSpec, rows: &[PendingRow]) -> Result
 /// Values go in as literals and are never cast. Postgres applies the target
 /// column's assignment cast, so `'123'` lands in an `int4` exactly as `123`
 /// would, and SQLite applies the column's type affinity to the same effect. A
-/// cast dbdelve chose for itself could only ever be the wrong one. A cleared cell
+/// cast vernier chose for itself could only ever be the wrong one. A cleared cell
 /// is therefore the empty string, and [`NewValue`]'s other two arms are the
 /// keywords: three different writes, which is the whole point of spelling two
 /// of them as something other than a value.
@@ -2282,11 +2282,11 @@ pub(crate) fn remember_statement(history: &mut Vec<String>, sql: &str) {
     history.truncate(crate::store::HISTORY_DEPTH);
 }
 
-/// dbdelve's statement appended to the buffer the user is writing in.
+/// vernier's statement appended to the buffer the user is writing in.
 ///
 /// The terminator is the whole subtlety: an unterminated statement with an
 /// `UPDATE` appended to it becomes one statement, and the next `cmd+enter`
-/// would send both as one. dbdelve is writing here because the user asked it to,
+/// would send both as one. vernier is writing here because the user asked it to,
 /// so the boundary of what they wrote has to survive the ask.
 pub(crate) fn appended_statement(engine: Engine, buffer: &str, statement: &str) -> String {
     let text = buffer.trim_end();
@@ -2383,7 +2383,7 @@ pub(crate) enum Destructive {
     Drop,
     Truncate,
     UnfilteredDelete,
-    /// dbdelve could not parse it, so it cannot say what it does.
+    /// vernier could not parse it, so it cannot say what it does.
     Unreadable,
 }
 
@@ -3666,7 +3666,7 @@ fn variant_verdict(statement: &Statement) -> Verdict {
         Statement::Query(_) => Verdict::READ,
 
         // `EXPLAIN ANALYZE DELETE FROM t` runs the delete -- documented in
-        // Postgres, and in MySQL since 8.0.18. dbdelve never sends it to SQLite:
+        // Postgres, and in MySQL since 8.0.18. vernier never sends it to SQLite:
         // `Engine::explain_prefix` returns None for that pair.
         Statement::Explain {
             analyze,
@@ -3946,7 +3946,7 @@ pub(crate) enum Stop {
     /// Allowed, but it destroys something and this connection has not silenced
     /// that kind.
     Confirm(Destructive),
-    /// dbdelve could not read it. Runs once on confirmation and changes nothing.
+    /// vernier could not read it. Runs once on confirmation and changes nothing.
     RunOnce,
 }
 
@@ -3988,7 +3988,7 @@ pub(crate) fn gate(verdict: &Verdict, mode: Mode, confirmed: &[Destructive]) -> 
 /// Token-level reformatting rather than a round trip through the `sqlparser`
 /// AST this module already parses with for `classify`. Regenerating a statement
 /// from that AST drops every comment the user wrote and quietly rewrites the
-/// dialect corners sqlparser only half-supports, which is hard rule 1 — dbdelve
+/// dialect corners sqlparser only half-supports, which is hard rule 1 — vernier
 /// never rewrites SQL behind the user's back.
 ///
 /// A tokenizer is meant to be unable to do either, and sqlformat is one
@@ -4380,7 +4380,7 @@ mod tests {
     }
 
     #[test]
-    fn nothing_is_spliced_into_a_statement_dbdelve_cannot_read_whole() {
+    fn nothing_is_spliced_into_a_statement_vernier_cannot_read_whole() {
         // Every one of these is valid SQL the grammar does not cover. Guessing
         // where the clause goes would corrupt a statement the user wrote.
         for sql in [
@@ -4493,7 +4493,7 @@ mod tests {
             "PRAGMA table_info(accounts);",
             "CALL refresh_totals();",
             "LISTEN jobs;",
-            "USE dbdelve_dev",
+            "USE vernier_dev",
         ] {
             let buffer = Buffer::parse(sql);
             let range = buffer.statement_at(0).unwrap_or_else(|| panic!("{sql}"));
@@ -4855,7 +4855,7 @@ mod tests {
         assert!(one_batch(Engine::SqlServer, "SELECT 1\nGO\nSELECT 2").is_err());
         assert_eq!(
             one_batch(Engine::SqlServer, "INSERT INTO t DEFAULT VALUES\nGO 5"),
-            Err("GO 5 repeats its batch, and dbdelve runs a batch once.".into())
+            Err("GO 5 repeats its batch, and Vernier runs a batch once.".into())
         );
         assert_eq!(
             one_batch(Engine::SqlServer, "SELECT 1\nGO 1"),
@@ -5034,7 +5034,7 @@ mod tests {
 
     #[test]
     fn a_statement_that_is_not_a_query_takes_no_sort() {
-        // A header click asks dbdelve to write an ORDER BY. Hard rule 1 says it
+        // A header click asks vernier to write an ORDER BY. Hard rule 1 says it
         // never writes a destructive statement, and the grammar gives `DELETE`
         // the same `from` child a `SELECT` has -- so the guard is the presence
         // of a `select`, not of a `from`.
@@ -5190,14 +5190,14 @@ mod tests {
         assert_eq!(
             update_row(
                 Engine::MySql,
-                "dbdelve_dev",
+                "vernier_dev",
                 "measurements",
                 &[("note", NewValue::Null), ("depth", set("12"))],
                 &[("id", "7")],
                 &[]
             )
             .unwrap(),
-            "UPDATE `dbdelve_dev`.`measurements` SET `note` = NULL, `depth` = '12' WHERE `id` = '7'"
+            "UPDATE `vernier_dev`.`measurements` SET `note` = NULL, `depth` = '12' WHERE `id` = '7'"
         );
         // And the word itself, typed into a cell, is still a string.
         assert_eq!(
@@ -5300,16 +5300,16 @@ mod tests {
         assert_eq!(
             insert_row(
                 Engine::MySql,
-                "dbdelve_dev",
+                "vernier_dev",
                 "me`as",
                 &[("no`te", Some(r"a\'b"))],
                 &[]
             )
             .unwrap(),
-            r"INSERT INTO `dbdelve_dev`.`me``as` (`no``te`) VALUES ('a\\''b')"
+            r"INSERT INTO `vernier_dev`.`me``as` (`no``te`) VALUES ('a\\''b')"
         );
         // An empty form is not `INSERT INTO t DEFAULT VALUES`, which is a
-        // statement dbdelve has never been asked for.
+        // statement vernier has never been asked for.
         assert!(insert_row(Engine::Postgres, "s", "t", &[], &[]).is_err());
     }
 
@@ -5701,9 +5701,9 @@ mod tests {
 
     #[test]
     fn the_gate_accepts_a_batch_bracketed_by_a_transaction() {
-        // What dbdelve writes for an engine that commits each statement on its
+        // What vernier writes for an engine that commits each statement on its
         // own. The brackets are part of the generated statement, so the gate
-        // has to know the shape or it would refuse dbdelve's own output.
+        // has to know the shape or it would refuse vernier's own output.
         assert!(is_generated_write(
             "BEGIN;\nUPDATE t SET a = '1' WHERE id = '2';\n\
              UPDATE t SET a = '3' WHERE id = '4';\nCOMMIT;"
@@ -5732,10 +5732,10 @@ mod tests {
     }
 
     #[test]
-    fn the_gate_refuses_everything_that_is_not_a_write_dbdelve_writes() {
-        // Hard rule 1 in code: DROP and TRUNCATE never leave dbdelve, whatever
+    fn the_gate_refuses_everything_that_is_not_a_write_vernier_writes() {
+        // Hard rule 1 in code: DROP and TRUNCATE never leave vernier, whatever
         // the user asked for. SELECT is here because the gate is a whitelist --
-        // being harmless is not the test, being one of the shapes dbdelve
+        // being harmless is not the test, being one of the shapes vernier
         // generates is. A keyed DELETE is no longer in this list because it is
         // one of those shapes; `delete_matches_key` is what asks whether the key
         // it names is the row's.
@@ -5788,7 +5788,7 @@ mod tests {
     fn the_gate_accepts_what_update_row_writes() {
         // The one test that keeps the generator and the gate from drifting
         // apart: whatever quoting or clause order changes here, the statement
-        // dbdelve builds is still one the gate can read as an UPDATE.
+        // vernier builds is still one the gate can read as an UPDATE.
         let statement = update_row(
             Engine::Postgres,
             "public",
@@ -5824,7 +5824,7 @@ mod tests {
             r#"SELECT * FROM "public"."accounts" LIMIT 1000"#,
             r#"SELECT * FROM "public"."accounts" WHERE "state" = 'ok' LIMIT 1000"#,
             r#"SELECT * FROM "public"."accounts" WHERE "state" = 'ok' ORDER BY "id" ASC LIMIT 100 OFFSET 200"#,
-            "SELECT * FROM `dbdelve_dev`.`accounts` WHERE `state` = 'ok' LIMIT 100",
+            "SELECT * FROM `vernier_dev`.`accounts` WHERE `state` = 'ok' LIMIT 100",
             r#"WITH x AS (SELECT 1 AS a) SELECT * FROM x LIMIT 10"#,
         ] {
             assert!(
@@ -5933,13 +5933,13 @@ mod tests {
         assert_eq!(
             delete_row(
                 Engine::MySql,
-                "dbdelve_demo",
+                "vernier_demo",
                 "measurements",
                 &[("id", "7")],
                 &[]
             )
             .unwrap(),
-            "DELETE FROM `dbdelve_demo`.`measurements` WHERE `id` = '7'"
+            "DELETE FROM `vernier_demo`.`measurements` WHERE `id` = '7'"
         );
         assert_eq!(
             delete_row(Engine::Sqlite, "main", "t", &[("id", "o'hara")], &[]).unwrap(),
@@ -5950,7 +5950,7 @@ mod tests {
     }
 
     #[test]
-    fn the_gate_admits_the_delete_dbdelve_writes_and_reads_its_key_back() {
+    fn the_gate_admits_the_delete_vernier_writes_and_reads_its_key_back() {
         for engine in [Engine::Postgres, Engine::MySql, Engine::Sqlite] {
             let statement = delete_row(engine, "s", "t", &[("id", "7")], &[]).unwrap();
             assert!(is_generated_write(&statement), "{statement} was refused");
@@ -5970,7 +5970,7 @@ mod tests {
 
         // A column name carrying one does not: `"we""ird"` is two adjacent
         // strings to this grammar and the whole statement fails to parse, so
-        // the gate refuses dbdelve's own output. That is the safe direction --
+        // the gate refuses vernier's own output. That is the safe direction --
         // the row stays -- and a gate that guessed past an unreadable tree is
         // the unsafe one.
         let odd = delete_row(Engine::Postgres, "s", "t", &[(r#"we"ird"#, "x")], &[]).unwrap();
@@ -6203,7 +6203,7 @@ mod tests {
             "UPDATE \"public\".\"accounts\" SET \"name\" = 'Ada' WHERE \"id\" = '1';\n\
              UPDATE \"public\".\"accounts\" SET \"name\" = 'Bo' WHERE \"id\" = '2';"
         );
-        // The batch dbdelve builds has to pass the same gate dbdelve checks every
+        // The batch vernier builds has to pass the same gate vernier checks every
         // generated statement against, or the generator and the gate have
         // drifted apart.
         assert!(is_generated_write(&batch));
@@ -6273,7 +6273,7 @@ mod tests {
             "BEGIN TRANSACTION; UPDATE \"dbo\".\"a\" SET \"x\" = N'1' WHERE \"id\" = N'1';",
             "BEGIN TRANSACTION; DROP TABLE x; COMMIT;",
             // Brackets are T-SQL's own quoting and the pinned grammar's error,
-            // which is why dbdelve never writes them.
+            // which is why vernier never writes them.
             "UPDATE [dbo].[a] SET [x] = N'1' WHERE [id] = N'1'",
             // A national prefix on a column is still a column, not a literal.
             "DELETE FROM \"dbo\".\"accounts\" WHERE \"id\" = N\"other\"",
@@ -6728,7 +6728,7 @@ mod tests {
             // The case tree-sitter got wrong, kept as a regression test.
             ("GRANT SELECT ON t TO u", Mode::Full, None),
             ("REVOKE SELECT ON t FROM u", Mode::Full, None),
-            // Opaque bodies: dbdelve cannot see what these run.
+            // Opaque bodies: vernier cannot see what these run.
             ("CALL p()", Mode::Full, None),
             // The maximum over the statements, not the first.
             (

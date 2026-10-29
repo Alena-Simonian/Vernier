@@ -287,6 +287,6 @@ priority = -1
 level = "allow"
 priority = 0
 
-# dbdelve: vendored as-is apart from the blend fix; its upstream deprecations are not ours to fix.
+# vernier: vendored as-is apart from the blend fix; its upstream deprecations are not ours to fix.
 [lints.rust]
 deprecated = "allow"

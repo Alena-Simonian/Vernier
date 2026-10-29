@@ -185,7 +185,7 @@ fn target(provider: &str, driver: &str) -> Result<Target, String> {
             Err("Sybase isn't supported".into())
         }
         "sqlserver" | "mssql" => Ok(Target::Server(ConnectionConfig::SqlServer)),
-        "snowflake" => Err("DBDelve's Snowflake signs in with a key file only".into()),
+        "snowflake" => Err("Vernier's Snowflake signs in with a key file only".into()),
         "oracle" => Err("Oracle isn't supported".into()),
         "generic" => Err(format!("{driver} isn't supported")),
         other => Err(format!("{other} isn't supported")),
@@ -286,7 +286,7 @@ fn import(
     })
 }
 
-/// The three JDBC URLs that are the same URL as DBDelve's once `jdbc:` is
+/// The three JDBC URLs that are the same URL as Vernier's once `jdbc:` is
 /// off. The user and password go in from the credentials file, which is where
 /// DBeaver keeps them even for a URL connection.
 fn from_jdbc(
@@ -295,7 +295,7 @@ fn from_jdbc(
     password: &str,
     engine: fn(ServerConfig) -> ConnectionConfig,
 ) -> Result<ConnectionConfig, String> {
-    const UNREADABLE: &str = "only a JDBC URL, which DBDelve can't read for this database";
+    const UNREADABLE: &str = "only a JDBC URL, which Vernier can't read for this database";
     if engine(ServerConfig::default()).engine() == Engine::MongoDb {
         return mongo_url(url, user, password);
     }
@@ -418,7 +418,7 @@ fn ssl(
     };
 
     if tab("ssl.client.cert").is_some() || tab("ssl.client.key").is_some() {
-        notes.push("client certificate left off: DBDelve doesn't send one".into());
+        notes.push("client certificate left off: Vernier doesn't send one".into());
     }
     let read: &[&str] = if clickhouse {
         &["ssl", "sslmode", "sslrootcert"]
@@ -465,7 +465,7 @@ fn ssl(
                 Some("none") => SslMode::Require,
                 Some(mode) => {
                     notes.push(format!(
-                        "SSL mode {mode} isn't one DBDelve has, so it was set to verify-full"
+                        "SSL mode {mode} isn't one Vernier has, so it was set to verify-full"
                     ));
                     SslMode::VerifyFull
                 }
@@ -474,7 +474,7 @@ fn ssl(
     } else if let Some(mode) = tab("sslMode").or_else(|| driver("sslmode")) {
         named_mode(&mode).unwrap_or_else(|| {
             notes.push(format!(
-                "SSL mode {mode} isn't one DBDelve has, so it was set to verify-full"
+                "SSL mode {mode} isn't one Vernier has, so it was set to verify-full"
             ));
             SslMode::VerifyFull
         })
@@ -664,7 +664,7 @@ mod tests {
         assert_eq!(engine("mssql", "sypase_jconnect").ok(), None);
         assert_eq!(
             engine("snowflake", "snowflake"),
-            Err("DBDelve's Snowflake signs in with a key file only".into())
+            Err("Vernier's Snowflake signs in with a key file only".into())
         );
         assert_eq!(
             engine("oracle", "oracle_thin"),
@@ -803,7 +803,7 @@ mod tests {
         ));
         assert_eq!(
             by_url("sqlserver", "jdbc:sqlserver://h;databaseName=app"),
-            Err("only a JDBC URL, which DBDelve can't read for this database".into())
+            Err("only a JDBC URL, which Vernier can't read for this database".into())
         );
         // No host at all reads as a URL connection too.
         assert!(matches!(
@@ -930,7 +930,7 @@ mod tests {
             (
                 SslMode::VerifyCa,
                 None,
-                vec!["client certificate left off: DBDelve doesn't send one".to_string()]
+                vec!["client certificate left off: Vernier doesn't send one".to_string()]
             )
         );
         assert_eq!(
@@ -1153,7 +1153,7 @@ mod tests {
                 None,
             )
             .map(|_| ()),
-            Err("only a JDBC URL, which DBDelve can't read for this database".into())
+            Err("only a JDBC URL, which Vernier can't read for this database".into())
         );
     }
 
@@ -1214,7 +1214,7 @@ mod tests {
     #[test]
     fn a_workspace_is_every_data_sources_file_in_every_project() {
         let root = std::env::temp_dir().join(format!(
-            "dbdelve-dbeaver-workspace-test-{}",
+            "vernier-dbeaver-workspace-test-{}",
             std::process::id()
         ));
         _ = fs::remove_dir_all(&root);

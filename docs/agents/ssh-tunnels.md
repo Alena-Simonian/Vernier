@@ -45,24 +45,24 @@ already set up on the machine.
   spawning thread's signal mask, and a GCD worker thread blocks every
   signal.** A connect runs on the background executor, one of those workers
   on macOS; ssh spawned there inherits a mask that blocks `SIGTERM`, so an
-  ordinary kill would be ignored and ssh would outlive DBDelve. The Unix
+  ordinary kill would be ignored and ssh would outlive Vernier. The Unix
   watchdog (`WATCHDOG` in `ssh.rs`) is a shell holding a pipe's read end on
-  its own stdin, whose write end only DBDelve holds; the shell's `pre_exec`
+  its own stdin, whose write end only Vernier holds; the shell's `pre_exec`
   clears the *child's* mask to empty and puts `SIGTERM` back to its default
-  disposition first, so the signal reaches ssh however DBDelve exits, not
+  disposition first, so the signal reaches ssh however Vernier exits, not
   just on a clean `Drop`. `live_ssh_a_tunnel_opened_with_every_signal_blocked_still_ends_on_drop`
   is the regression test.
 - **Windows has no watchdog shell, so it kills the tree through a Job
   Object** (`kill_on_close_job`), created with
   `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` and assigned right after spawn. Marked
   `ponytail:` in the code: ssh runs briefly before it joins the job, so a
-  DBDelve killed in that window can leave it behind; spawning suspended and
+  Vernier killed in that window can leave it behind; spawning suspended and
   resuming only after assignment would close that gap, if it's ever worth
   doing.
 - **`ControlMaster=no` and `ControlPath=none` are load-bearing, not
   cleanliness.** A config's `ControlPersist` would fork ssh into the
   background past `Drop` and the watchdog, and an existing control master
-  would take the forward over from a process DBDelve never held a handle to
+  would take the forward over from a process Vernier never held a handle to
   — either way the tunnel would outlive the connection.
 - **An effective `ask` becomes `accept-new`.** `host_key_checking_is_ask`
   runs `ssh -G` over the same arguments. Its output does not distinguish

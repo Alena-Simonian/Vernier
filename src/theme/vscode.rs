@@ -1,5 +1,5 @@
 //! VS Code's colour themes, its own and its installed extensions', converted
-//! onto dbdelve's [`Theme`].
+//! onto vernier's [`Theme`].
 
 use std::path::{Path, PathBuf};
 
@@ -239,7 +239,7 @@ fn convert(name: String, light: bool, source: &Source) -> Theme {
             "quickInput.background",
         ])
         .unwrap_or(base.overlay),
-        // dbdelve writes `text` on a control, where VS Code writes the
+        // vernier writes `text` on a control, where VS Code writes the
         // button's own foreground: Poimandres's secondary button is its text
         // colour. And Gruvbox's input is its editor, which no button stands off.
         control: [

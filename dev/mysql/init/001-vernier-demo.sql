@@ -153,7 +153,7 @@ WITH RECURSIVE series (value) AS (
 SELECT
     2,
     'Large values',
-    REPEAT('DBDelve keeps the complete value while the grid clips visually. ', 2048),
+    REPEAT('Vernier keeps the complete value while the grid clips visually. ', 2048),
     JSON_OBJECT(
         'kind', 'large',
         'values', JSON_ARRAYAGG(JSON_OBJECT('index', value, 'square', value * value))
@@ -210,20 +210,20 @@ INSERT INTO order_items VALUES
 -- `information_schema` names the referenced schema either way -- which is the
 -- thing the catalog query has to get right.
 --
--- The entrypoint grants the app user `dbdelve` rights on MYSQL_DATABASE only, so
+-- The entrypoint grants the app user `vernier` rights on MYSQL_DATABASE only, so
 -- the second database needs its own grant or the app cannot read what it seeds.
-CREATE DATABASE dbdelve_archive;
+CREATE DATABASE vernier_archive;
 
-GRANT ALL PRIVILEGES ON dbdelve_archive.* TO 'dbdelve'@'%';
+GRANT ALL PRIVILEGES ON vernier_archive.* TO 'vernier'@'%';
 
-CREATE TABLE dbdelve_archive.closed_accounts (
+CREATE TABLE vernier_archive.closed_accounts (
     id INT PRIMARY KEY,
     account_id BIGINT NOT NULL,
     closed_at DATETIME(6) NOT NULL,
-    FOREIGN KEY (account_id) REFERENCES dbdelve_dev.accounts (id)
+    FOREIGN KEY (account_id) REFERENCES vernier_dev.accounts (id)
 );
 
-INSERT INTO dbdelve_archive.closed_accounts VALUES
+INSERT INTO vernier_archive.closed_accounts VALUES
     (1, 3, '2024-07-01 00:00:00'),
     (2, 5, '2024-07-04 12:00:00');
 

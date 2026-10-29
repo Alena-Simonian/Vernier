@@ -1,4 +1,4 @@
-//! dbdelve's theme.
+//! vernier's theme.
 //!
 //! Two rules hold this module together:
 //!
@@ -56,7 +56,7 @@ pub mod layout {
     pub const TEXT_LG: f32 = 16.0;
 
     /// One icon size everywhere. Icons here label rows and buttons; nothing in
-    /// dbdelve is an illustration, so a second size would only be decoration.
+    /// vernier is an illustration, so a second size would only be decoration.
     pub const ICON_SIZE: f32 = 14.0;
 
     pub const RADIUS_CONTROL: f32 = 6.0;
@@ -327,7 +327,7 @@ pub fn popup_theme(cx: &gpui::App) -> Theme {
     cx.global::<PopupTheme>().0
 }
 
-/// Which of the three faces a family is being set for. dbdelve's type does three
+/// Which of the three faces a family is being set for. vernier's type does three
 /// different jobs: chrome labels itself, the editor is code, and the grid is
 /// columns of values that only line up in a monospaced face.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -343,7 +343,7 @@ pub enum FontSlot {
 /// The three families in use.
 ///
 /// A global of its own rather than fields on [`Theme`]: a theme is a palette
-/// dbdelve ships and a font is the user's pick, so switching one must not reset the
+/// vernier ships and a font is the user's pick, so switching one must not reset the
 /// other.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Fonts {
@@ -481,7 +481,7 @@ pub const OPACITY_MIN: f32 = 0.50;
 /// frost has the opposite worst case: dark text over a dark desktop, where
 /// everything the frost lets through darkens the plane the text sits on. Under
 /// a black one — a full-screen terminal is enough — chrome is only `opacity`
-/// times its own tone, and 0.50 leaves dbdelve's own body text near 3.5:1.
+/// times its own tone, and 0.50 leaves vernier's own body text near 3.5:1.
 /// 0.79 is where every family holds body text at AA, and muted text, syntax
 /// and `danger` at AA large, on the planes each is shown on — GitHub Light's
 /// `danger` is the last to get there. It is a default, not a limit: someone
@@ -601,7 +601,7 @@ impl ConnectionColor {
             Appearance::Dark => (BAND_LIGHTNESS_DARK, 1.0),
             Appearance::Light => (BAND_LIGHTNESS_LIGHT, -1.0),
         };
-        // The fixed lightness is tuned for dbdelve's own chrome. A palette
+        // The fixed lightness is tuned for vernier's own chrome. A palette
         // whose chrome sits near it would get a band that barely shows, so the
         // band steps away from the chrome instead.
         let chrome = Oklch::from_srgb(theme.surface).l;
@@ -683,7 +683,7 @@ const BAND_LIGHTNESS_DARK: f32 = 0.35;
 const BAND_LIGHTNESS_LIGHT: f32 = 0.88;
 const GLASS_BAND_ALPHA: f32 = 0.40;
 
-/// Below dbdelve Light's 0.06 and Tokyo Night Day's 0.043, so neither band
+/// Below vernier Light's 0.06 and Tokyo Night Day's 0.043, so neither band
 /// moves.
 const BAND_CHROME_GAP: f32 = 0.04;
 
@@ -697,7 +697,7 @@ const PALETTE_EDITED_ALPHA: f32 = 0.14;
 /// 8-level floor a plane has to clear to be seen at all.
 const PILL_ALPHA: f32 = 0.22;
 
-/// Every colour dbdelve paints. Flat fields, not nested groups — a token you have
+/// Every colour vernier paints. Flat fields, not nested groups — a token you have
 /// to go looking for gets duplicated instead of reused.
 ///
 /// A new theme is one constructor returning this struct plus one entry in
@@ -719,7 +719,7 @@ pub struct Theme {
     pub opacity: f32,
 
     /// The content plane, and the brightest tone: the results. The data is
-    /// what dbdelve exists to show, so it gets the most light.
+    /// what vernier exists to show, so it gets the most light.
     pub bg: Srgb,
     /// One step behind `bg`: the editor's page and the active tab — the
     /// prompt, not the answer. Three planes rather than two because an editor
@@ -788,8 +788,8 @@ impl Theme {
         all
     }
 
-    /// Every theme dbdelve ships: every dark theme, then every light one. A
-    /// first run starts on the first or on DBDelve Light, by the system's
+    /// Every theme vernier ships: every dark theme, then every light one. A
+    /// first run starts on the first or on Vernier Light, by the system's
     /// appearance (`starting_theme`), and both are opaque: a blurred window
     /// reads as noise among a desktop full of others, so glass is something to
     /// pick, not a start.
@@ -811,7 +811,7 @@ impl Theme {
             Self::one_dark(),
             Self::one_dark().glassed("One Dark Glass"),
             Self::light(),
-            Self::light().glassed("DBDelve Light Glass"),
+            Self::light().glassed("Vernier Light Glass"),
             Self::gruvbox_light(),
             Self::gruvbox_light().glassed("Gruvbox Light Glass"),
             Self::catppuccin_latte(),
@@ -1059,7 +1059,7 @@ impl Theme {
             component.radius_lg = gpui::px(layout::RADIUS_LARGE);
             // `Root` feeds this to `window.set_rem_size`, so it is the unit for
             // every `rems()` dimension inside gpui-component -- not just a text
-            // size. dbdelve's own tree never reads it: every `text_size` here is an
+            // size. vernier's own tree never reads it: every `text_size` here is an
             // absolute `layout::TEXT_*`. The library's 16 at the default chrome
             // size, so the widgets it draws for us keep the proportions they were
             // designed at -- the completion popup in particular hardcodes
@@ -1070,11 +1070,11 @@ impl Theme {
             component.mono_font_size = gpui::px(layout::TEXT_MD);
             component.font_family = fonts.chrome;
             // Kept on the editor's family so that whatever inside gpui-component
-            // reads the mono slot renders in the face dbdelve is already using for
+            // reads the mono slot renders in the face vernier is already using for
             // code, rather than in a third one nobody picked.
             component.mono_font_family = fonts.editor;
 
-            // The one plane painted below dbdelve's own tree, by `Root`. It is the
+            // The one plane painted below vernier's own tree, by `Root`. It is the
             // frost, so removing a `bg` from a chrome element uncovers glass rather
             // than a hole.
             component.colors.background = self.frost().into();
@@ -1086,7 +1086,7 @@ impl Theme {
             component.colors.ring = self.accent.into();
             // Only the completion popup reads this, for the matched prefix of a
             // suggestion. Left at the library default it is a blue belonging to no
-            // palette dbdelve ships. The card's accent, since the card is the
+            // palette vernier ships. The card's accent, since the card is the
             // only place it is painted.
             component.colors.blue = popup.accent.into();
             component.colors.muted = self.surface.into();
@@ -1095,7 +1095,7 @@ impl Theme {
             // to frost its popups; opaque, they are drawn exactly as before.
             component.colors.popover = self.overlay_glass().into();
             component.colors.popover_foreground = self.text.into();
-            // Both button variants are the same neutral: a dbdelve button is a grey
+            // Both button variants are the same neutral: a vernier button is a grey
             // that steps visibly brighter under the pointer, never a colour.
             // Colour is reserved for state (selection, danger), not for controls.
             let control_hover = self.element_active.flatten(self.control);
@@ -1116,9 +1116,9 @@ impl Theme {
             component.colors.secondary_hover = control_hover.into();
             component.colors.secondary_active = control_active.into();
             // One highlight for everything that lights up under the pointer, so a
-            // ghost button, a menu item and dbdelve's own chips agree: the library
+            // ghost button, a menu item and vernier's own chips agree: the library
             // washes all of them with `accent` (a ghost button at half strength on
-            // dark themes), and dbdelve's own hovers are `element_hover`, so this
+            // dark themes), and vernier's own hovers are `element_hover`, so this
             // is the gray wash and never the blue of a selection. The completion
             // popup's selected row and a right-click menu's highlighted item take
             // it too; `selection` stays what a selected row in the tree and the
@@ -1219,7 +1219,7 @@ impl Theme {
         .unwrap_or_default();
 
         Arc::new(HighlightTheme {
-            name: "dbdelve".into(),
+            name: "vernier".into(),
             appearance: match self.appearance {
                 Appearance::Dark => ThemeMode::Dark,
                 Appearance::Light => ThemeMode::Light,
@@ -1267,7 +1267,7 @@ impl Theme {
     /// opaque page reads as patchiness on a transparent one. What separates the
     /// planes here is mostly how much they let through — see [`OPACITY_DEFAULT`].
     pub fn glass() -> Self {
-        Self::dark().glassed("DBDelve Dark Glass")
+        Self::dark().glassed("Vernier Dark Glass")
     }
 
     /// This theme re-toned as glass: each plane takes the lightness the glass
@@ -1339,7 +1339,7 @@ impl Theme {
     /// purpose; the hairlines and the header carry the structure instead.
     pub fn black() -> Self {
         Self {
-            name: "DBDelve Black",
+            name: "Vernier Black",
             is_glass: false,
 
             bg: neutral(0.155),
@@ -1360,7 +1360,7 @@ impl Theme {
     /// gets to ignore.
     pub fn dark() -> Self {
         Self {
-            name: "DBDelve Dark",
+            name: "Vernier Dark",
             appearance: Appearance::Dark,
             is_glass: false,
             opacity: OPACITY_DEFAULT,
@@ -1417,7 +1417,7 @@ impl Theme {
 
     pub fn light() -> Self {
         Self {
-            name: "DBDelve Light",
+            name: "Vernier Light",
             appearance: Appearance::Light,
             is_glass: false,
             opacity: OPACITY_DEFAULT,
@@ -1965,16 +1965,22 @@ impl Theme {
     }
 }
 
-/// The glass themes renamed when light glass arrived, so a profile saved under
-/// the old name comes back on the same theme rather than the default.
-const RENAMED_THEMES: [(&str, &str); 4] = [
-    ("DBDelve Glass", "DBDelve Dark Glass"),
+/// The glass themes renamed when light glass arrived, and the DBDelve themes
+/// renamed with the app, so a profile saved under either old name comes back
+/// on the same theme rather than the default.
+const RENAMED_THEMES: [(&str, &str); 9] = [
+    ("DBDelve Glass", "Vernier Dark Glass"),
+    ("DBDelve Dark Glass", "Vernier Dark Glass"),
+    ("DBDelve Light Glass", "Vernier Light Glass"),
+    ("DBDelve Black", "Vernier Black"),
+    ("DBDelve Dark", "Vernier Dark"),
+    ("DBDelve Light", "Vernier Light"),
     ("Gruvbox Glass", "Gruvbox Dark Glass"),
     ("Catppuccin Glass", "Catppuccin Mocha Glass"),
     ("GitHub Glass", "GitHub Dark Glass"),
 ];
 
-/// Where someone who has never picked a theme starts: the opaque DBDelve theme
+/// Where someone who has never picked a theme starts: the opaque Vernier theme
 /// on the system's side. Only a start; once one is saved the system's
 /// appearance no longer matters, unless the theme is set to match it.
 pub(crate) fn starting_theme(system: Appearance) -> Theme {
@@ -1987,7 +1993,8 @@ pub(crate) fn starting_theme(system: Appearance) -> Theme {
 /// A theme read back from disk, by name. An absent or unknown name is the
 /// starting theme: a palette dropped from `all` between launches must not
 /// strand the app on a name nothing answers to. Case-blind because the names
-/// were once spelled "dbdelve Dark" and profiles written then still say so.
+/// were once spelled "dbdelve Dark", and a profile saved under a DBDelve name
+/// still says so.
 pub(crate) fn restored_theme(name: Option<&str>, system: Appearance) -> Theme {
     name.and_then(|name| {
         let name = RENAMED_THEMES
@@ -2042,7 +2049,7 @@ mod tests {
     use super::*;
 
     /// WCAG AA: 4.5 for body text, 3.0 for large text and UI components.
-    /// AAA: 7.0. dbdelve holds body text to AAA because a result grid is dense.
+    /// AAA: 7.0. vernier holds body text to AAA because a result grid is dense.
     const AAA_TEXT: f32 = 7.0;
     const AA_TEXT: f32 = 4.5;
     const AA_LARGE: f32 = 3.0;
@@ -2076,7 +2083,7 @@ mod tests {
     }
 
     #[test]
-    fn every_highlighter_category_has_a_dbdelve_style() {
+    fn every_highlighter_category_has_a_vernier_style() {
         for theme in Theme::all() {
             let syntax = serde_json::to_value(&theme.highlight_theme().style.syntax).unwrap();
             let styles = syntax.as_object().unwrap();
@@ -2252,13 +2259,13 @@ mod tests {
     }
 
     #[test]
-    fn dbdelves_own_bands_keep_their_fixed_lightness() {
+    fn verniers_own_bands_keep_their_fixed_lightness() {
         for t in [
             Theme::glass(),
             Theme::black(),
             Theme::dark(),
             Theme::light(),
-            Theme::light().glassed("DBDelve Light Glass"),
+            Theme::light().glassed("Vernier Light Glass"),
         ] {
             for color in ConnectionColor::ALL {
                 let fixed = match (t.is_glass, t.appearance) {
@@ -2740,7 +2747,7 @@ mod tests {
 
     #[test]
     fn every_dark_theme_is_listed_before_every_light_one() {
-        assert_eq!(Theme::default().name, "DBDelve Black");
+        assert_eq!(Theme::default().name, "Vernier Black");
         assert!(!Theme::default().is_glass);
         let first_light = Theme::all()
             .iter()
@@ -2775,9 +2782,9 @@ mod tests {
     fn a_first_run_starts_on_the_systems_side_and_a_saved_theme_wins() {
         assert_eq!(
             restored_theme(None, Appearance::Light).name,
-            "DBDelve Light"
+            "Vernier Light"
         );
-        assert_eq!(restored_theme(None, Appearance::Dark).name, "DBDelve Black");
+        assert_eq!(restored_theme(None, Appearance::Dark).name, "Vernier Black");
         for system in [Appearance::Light, Appearance::Dark] {
             assert!(!restored_theme(None, system).is_glass);
             assert_eq!(
@@ -2786,8 +2793,8 @@ mod tests {
                 "{system:?}"
             );
             assert_eq!(
-                restored_theme(Some("DBDelve Black"), system).name,
-                "DBDelve Black"
+                restored_theme(Some("Vernier Black"), system).name,
+                "Vernier Black"
             );
         }
         assert_eq!(
@@ -2804,7 +2811,7 @@ mod tests {
     fn a_theme_stored_under_its_old_lowercase_name_is_still_restored() {
         assert_eq!(
             restored_theme(Some("dbdelve Dark"), Appearance::Dark).name,
-            "DBDelve Dark"
+            "Vernier Dark"
         );
     }
 

@@ -1,4 +1,4 @@
-//! The statements and fragments DBDelve generates today, recorded per engine as
+//! The statements and fragments Vernier generates today, recorded per engine as
 //! `insta` snapshots, so the engine-spec refactor can be held to reproducing
 //! them character for character. It sits outside `sql.rs`, `filter.rs`,
 //! `explorer.rs` and `db/mod.rs` so that refactor never edits the tests that
@@ -97,7 +97,7 @@ pub(crate) const PAGE_KEYS: [&[&str]; 5] = [
 
 pub(crate) fn home(engine: Engine) -> (&'static str, &'static str) {
     match engine {
-        Engine::MongoDb => ("dbdelve_dev", "accounts"),
+        Engine::MongoDb => ("vernier_dev", "accounts"),
         Engine::Redis => ("db0", redis_cmd::browse::KEYS),
         _ => ("public", "accounts"),
     }

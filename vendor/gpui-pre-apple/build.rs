@@ -63,7 +63,7 @@ mod apple_build {
             "SurfaceInputIndex".into(),
             "SurfaceBounds".into(),
             "TransformationMatrix".into(),
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             "BackdropBlurInputIndex".into(),
             "BackdropBlur".into(),
         ]);
@@ -104,7 +104,7 @@ mod apple_build {
     /// build-script runtime against this crate's manifest dir, so no checkout
     /// path is baked into a compiled artifact (which corgi rejects).
     fn find_gpui_crate_dir() -> PathBuf {
-        // dbdelve patch: read the vendored gpui-pre beside this crate, which
+        // vernier patch: read the vendored gpui-pre beside this crate, which
         // carries the backdrop-blur types, instead of the copy under `vendor/gpui`.
         PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("../gpui-pre")
     }

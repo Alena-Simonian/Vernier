@@ -291,7 +291,7 @@ pub struct Style {
     /// Box shadow of the element
     pub box_shadow: Vec<BoxShadow>,
 
-    /// dbdelve patch: frost whatever is painted beneath this element, with a
+    /// vernier patch: frost whatever is painted beneath this element, with a
     /// gaussian blur of this radius (the sigma) clipped to its rounded bounds.
     /// Keep a translucent background over it, through which the blur shows;
     /// every renderer (Metal, DirectX, wgpu) draws it.
@@ -698,7 +698,7 @@ impl Style {
         cx: &mut App,
         continuation: impl FnOnce(&mut Window, &mut App),
     ) {
-        // dbdelve patch: only the blur gets a layer of its own. Its order lands
+        // vernier patch: only the blur gets a layer of its own. Its order lands
         // above everything already painted beneath the element, and the bounds
         // tree orders whatever the element paints next -- shadows, fill,
         // border, children -- above it. Wrapping the whole element in that
@@ -727,7 +727,7 @@ impl Style {
         }
     }
 
-    // dbdelve patch: upstream's `paint`, split out for the backdrop blur.
+    // vernier patch: upstream's `paint`, split out for the backdrop blur.
     fn paint_unfrosted(
         &self,
         bounds: Bounds<Pixels>,
@@ -746,7 +746,7 @@ impl Style {
         }
 
         let rem_size = window.rem_size();
-        // dbdelve patch: shared with the backdrop blur.
+        // vernier patch: shared with the backdrop blur.
         let corner_radii = self.paint_corner_radii(bounds, window);
 
         window.paint_drop_shadows(bounds, corner_radii, &self.box_shadow);
@@ -802,7 +802,7 @@ impl Style {
         }
     }
 
-    // dbdelve patch: split out of `paint` for the backdrop blur.
+    // vernier patch: split out of `paint` for the backdrop blur.
     fn paint_corner_radii(&self, bounds: Bounds<Pixels>, window: &Window) -> Corners<Pixels> {
         self.corner_radii
             .to_pixels(window.rem_size())
@@ -854,7 +854,7 @@ impl Default for Style {
             border_style: BorderStyle::default(),
             corner_radii: Corners::default(),
             box_shadow: Default::default(),
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             backdrop_blur: None,
             text: TextStyleRefinement::default(),
             mouse_cursor: None,
@@ -1578,7 +1578,7 @@ mod tests {
     }
 }
 
-// dbdelve patch: draw-order tests for a frosted element.
+// vernier patch: draw-order tests for a frosted element.
 #[cfg(test)]
 mod backdrop_blur_tests {
     use crate::{

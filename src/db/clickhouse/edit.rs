@@ -25,7 +25,7 @@ const PROJECTIONS: &str = "This table has projections and its lightweight_mutati
 const GONE: &str = "No row has these values any more; it was changed or deleted since it was read.";
 
 pub(super) const UNCOUNTED: &str =
-    "DBDelve could not count the rows this edit would change, so it ran nothing.";
+    "Vernier could not count the rows this edit would change, so it ran nothing.";
 
 const RESPELLED: &str =
     "This table's settings changed since its rows were read, so the edit was not run.";
@@ -293,7 +293,7 @@ const SELECT_LIST: &str = "Only rows selected as the table's own columns, or *, 
 const FINAL: &str = "FINAL merges rows as they are read, so these rows cannot be edited.";
 
 pub(super) const SESSION_SET: &str = "This session ran a SET, which can change how values are \
-                                      shown, so DBDelve cannot match these rows by value. Open \
+                                      shown, so Vernier cannot match these rows by value. Open \
                                       the table from the explorer to edit its rows.";
 
 pub(super) const TEMPORARY: &str = "These rows are from a temporary table, which only this session \
@@ -301,7 +301,7 @@ pub(super) const TEMPORARY: &str = "These rows are from a temporary table, which
 
 const TWICE: &str = "These rows hold a column twice, so they cannot be edited.";
 
-const UNMAPPED: &str = "DBDelve could not tell which column of the table each result column is, \
+const UNMAPPED: &str = "Vernier could not tell which column of the table each result column is, \
                         so these rows cannot be edited.";
 
 /// What a user's query reads when it is a select of one table's own rows
@@ -323,7 +323,7 @@ pub(super) fn query_shape(sql: &str) -> Result<(TableRead, Vec<String>), &'stati
 pub(super) fn unread(why: Unread) -> &'static str {
     match why {
         Unread::Unparsed => {
-            "DBDelve cannot read this statement whole, so it cannot tell which table its rows are \
+            "Vernier cannot read this statement whole, so it cannot tell which table its rows are \
              from."
         }
         Unread::NotAQuery => "Only the rows of a SELECT can be edited.",
@@ -347,7 +347,7 @@ pub(super) fn unread(why: Unread) -> &'static str {
         }
         Unread::NotATable => "These rows are not read from a table, so they cannot be edited.",
         Unread::Projection => SELECT_LIST,
-        Unread::Other => "DBDelve edits the rows of a plain SELECT of one table only.",
+        Unread::Other => "Vernier edits the rows of a plain SELECT of one table only.",
     }
 }
 
@@ -373,7 +373,7 @@ pub(super) fn origins(
 ) -> Result<Vec<String>, String> {
     if let Some(shadow) = shadows.iter().find(|shadow| table.column(shadow).is_some()) {
         return Err(format!(
-            "{shadow} is a column's name and is read here as something else too, so DBDelve \
+            "{shadow} is a column's name and is read here as something else too, so Vernier \
              cannot tell which one each value is."
         ));
     }
@@ -436,14 +436,14 @@ const NO_TRANSACTION: &str = "ClickHouse has no transaction. The statements run 
                               stop at the first one refused or failed; the ones before it stay applied.";
 
 const ONE_ROW: &str = "Each row is matched by all of its values. Just before each statement runs, \
-                       DBDelve counts the rows that match and runs it only if exactly one does.";
+                       Vernier counts the rows that match and runs it only if exactly one does.";
 
 const MUTATION: &str = "This table cannot take a lightweight UPDATE, so the change is an ALTER TABLE \
                         ... UPDATE mutation. It rewrites the parts holding the row, which can be \
                         slow on a large table, and it returns once every replica has applied it.";
 
 const PROJECTION_DELETE: &str = "A table with projections deletes rows only when \
-                                 lightweight_mutation_projection_mode is not throw; DBDelve refuses \
+                                 lightweight_mutation_projection_mode is not throw; Vernier refuses \
                                  the delete before it runs otherwise.";
 
 const WRITTEN_AS_TEXT: &str = "Values go to the server as quoted text and it converts each to its \
@@ -538,7 +538,7 @@ pub(super) fn count_refusal(count: u64) -> Option<String> {
         1 => None,
         0 => Some(GONE.into()),
         many => Some(format!(
-            "{many} rows have exactly these values, so DBDelve will not change one of them."
+            "{many} rows have exactly these values, so Vernier will not change one of them."
         )),
     }
 }
@@ -611,12 +611,12 @@ pub(super) fn halted(
             ("failed", reason, position)
         }
         Halt::Failed(Stage::Describe, error) => (
-            "failed before it was sent, while DBDelve read its table",
+            "failed before it was sent, while Vernier read its table",
             error.message,
             None,
         ),
         Halt::Failed(Stage::Count, error) => (
-            "failed before it was sent, while DBDelve counted its rows",
+            "failed before it was sent, while Vernier counted its rows",
             error.message,
             None,
         ),
@@ -1342,7 +1342,7 @@ mod tests {
     fn a_result_column_that_cannot_be_mapped_exactly_refuses_the_rows() {
         let shadowed = |name: &str| {
             format!(
-                "{name} is a column's name and is read here as something else too, so DBDelve \
+                "{name} is a column's name and is read here as something else too, so Vernier \
                  cannot tell which one each value is."
             )
         };
@@ -1455,7 +1455,7 @@ mod tests {
         assert_eq!(count_refusal(0).as_deref(), Some(GONE));
         assert_eq!(
             count_refusal(3).as_deref(),
-            Some("3 rows have exactly these values, so DBDelve will not change one of them.")
+            Some("3 rows have exactly these values, so Vernier will not change one of them.")
         );
     }
 
@@ -1538,11 +1538,11 @@ mod tests {
         for (stage, verb) in [
             (
                 Stage::Describe,
-                "failed before it was sent, while DBDelve read its table",
+                "failed before it was sent, while Vernier read its table",
             ),
             (
                 Stage::Count,
-                "failed before it was sent, while DBDelve counted its rows",
+                "failed before it was sent, while Vernier counted its rows",
             ),
             (Stage::Unsent, "failed before it was sent"),
         ] {

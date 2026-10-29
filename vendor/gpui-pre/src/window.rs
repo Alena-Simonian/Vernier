@@ -4633,7 +4633,7 @@ impl Window {
         }
     }
 
-    /// dbdelve patch: paint a backdrop blur within the window. Everything
+    /// vernier patch: paint a backdrop blur within the window. Everything
     /// already painted beneath `bounds` is snapshotted and painted back
     /// gaussian-blurred inside the rounded rect, and whatever is painted after
     /// this call composites on top of the blur. `blur_radius` is the gaussian

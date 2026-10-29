@@ -1,6 +1,6 @@
 //! Within-window backdrop snapshots. All GPU state is lazy and device-local.
 //!
-//! dbdelve patch: the whole module, ported from zui's DirectX renderer
+//! vernier patch: the whole module, ported from zui's DirectX renderer
 //! (zeronsh/zui@361ff20, minus its overlay-plane source). The one deviation
 //! is the constant-buffer slot: see `PARAMS_SLOT`.
 use super::*;

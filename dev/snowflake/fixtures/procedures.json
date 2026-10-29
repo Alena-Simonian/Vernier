@@ -8,7 +8,7 @@
     } ],
     "rowType" : [ {
       "name" : "schema_name",
-      "database" : "DBDELVE_TEST",
+      "database" : "VERNIER_TEST",
       "schema" : "INFORMATION_SCHEMA",
       "table" : "PROCEDURES",
       "collation" : null,
@@ -20,7 +20,7 @@
       "type" : "text"
     }, {
       "name" : "routine_name",
-      "database" : "DBDELVE_TEST",
+      "database" : "VERNIER_TEST",
       "schema" : "INFORMATION_SCHEMA",
       "table" : "PROCEDURES",
       "collation" : null,
@@ -92,7 +92,7 @@
       "type" : "text"
     } ]
   },
-  "data" : [ ["SALES","REFUND","procedure","(ORDER_ID NUMBER)","VARCHAR(134217728)","SQL","\nBEGIN\n  UPDATE DBDELVE_TEST.SALES.ORDERS SET status = 'refunded' WHERE id = :order_id;\n  RETURN 'ok';\nEND;\n"] ],
+  "data" : [ ["SALES","REFUND","procedure","(ORDER_ID NUMBER)","VARCHAR(134217728)","SQL","\nBEGIN\n  UPDATE VERNIER_TEST.SALES.ORDERS SET status = 'refunded' WHERE id = :order_id;\n  RETURN 'ok';\nEND;\n"] ],
   "code" : "090001",
   "statementStatusUrl" : "/api/v2/statements/00000000-0000-0000-0000-000000000023?requestId=00000000-0000-0000-0000-000000000024",
   "requestId" : "00000000-0000-0000-0000-000000000024",

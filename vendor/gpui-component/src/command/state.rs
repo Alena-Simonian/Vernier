@@ -734,7 +734,7 @@ impl CommandState {
             .text_sm()
             .rounded(self.item_radius(window, cx))
             .when(selected, |this| {
-                // dbdelve patch: a wash under frost (see `popover_highlight`).
+                // vernier patch: a wash under frost (see `popover_highlight`).
                 if popover_frosted(cx) {
                     let highlight = popover_highlight(cx);
                     this.bg(highlight.fill).text_color(highlight.foreground)
@@ -937,7 +937,7 @@ impl Render for CommandState {
             .w_full()
             .overflow_hidden()
             .bg(cx.theme().popover)
-            // dbdelve patch: the popover tint is only a tint on frost.
+            // vernier patch: the popover tint is only a tint on frost.
             .when(popover_frosted(cx), |this| this.backdrop_blur(POPOVER_BLUR))
             .text_color(cx.theme().popover_foreground)
             .when(self.options.bordered, |this| {

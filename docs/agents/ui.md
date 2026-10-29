@@ -21,9 +21,9 @@ draws the menu itself, so a provider is the whole integration, and `up`, `down`,
 `enter` and `escape` are already routed to the menu when it is open. Do not
 hand-roll a popup beside it.
 
-The library binds `escape` scoped to the input; DBDelve's `show_editor` binding
+The library binds `escape` scoped to the input; Vernier's `show_editor` binding
 is unscoped, and an unscoped binding wins at every depth (see "GPUI hazards" in `AGENTS.md`).
-`show_editor` must therefore `cx.propagate()` on the paths where DBDelve has
+`show_editor` must therefore `cx.propagate()` on the paths where Vernier has
 nothing stacked to close, or the completion popup cannot be dismissed.
 
 It does **not** provide a fuzzy matcher, and its `command` palette filters by
@@ -48,7 +48,7 @@ the panel's search when it is dismissed or a theme or font is picked from it;
 any other row it confirms leaves focus where its command put it.
 
 It also does **not** ship the icons its `IconName` names: those are Lucide file
-paths with no files behind them. `src/icons.rs` is DBDelve's `AssetSource`: it
+paths with no files behind them. `src/icons.rs` is Vernier's `AssetSource`: it
 serves the same paths from `icondata_lu` in memory, so nothing is vendored and
 the library's own widgets get their icons from it too. Add a row to `ICONS`
 when something needs one; an unlisted path draws nothing.
@@ -71,7 +71,7 @@ accept a library default appearance; map it to our theme tokens.
 
 ## Titlebar and appearance
 
-- **Titlebar**: macOS and Windows get DBDelve's own strip over a transparent
+- **Titlebar**: macOS and Windows get Vernier's own strip over a transparent
   system titlebar (`ui::CLIENT_TITLEBAR`); Windows draws no buttons into it, so
   `ui::titlebar` draws them. Linux keeps the system bar.
 - **Appearance**: with Match system appearance on, the window wears
@@ -105,7 +105,7 @@ The redraw hazard, the one that costs CPU, is in `AGENTS.md`, "GPUI hazards". Th
 
 ## Animation
 
-There is no motion system of DBDelve's own: no transitions, no shared easing
+There is no motion system of Vernier's own: no transitions, no shared easing
 curves, and hover states are instant. These things move:
 
 - **The query-in-flight `Spinner`** (gpui-component's, built in `views.rs`),

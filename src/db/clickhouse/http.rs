@@ -33,7 +33,7 @@ const CONNECT_WITHIN: Duration = Duration::from_secs(30);
 /// How often a blocked read looks at its abort flag and idle bound.
 const TICK: Duration = Duration::from_millis(250);
 
-/// What DBDelve's own catalog and structure requests wait for.
+/// What Vernier's own catalog and structure requests wait for.
 const INTERNAL_BOUND: Duration = Duration::from_secs(120);
 
 /// A user's timeout and the client's slack around it (design 4.5). Short under
@@ -93,7 +93,7 @@ impl Bounds {
         )
     }
 
-    /// DBDelve's own catalog and structure requests.
+    /// Vernier's own catalog and structure requests.
     pub fn internal() -> Self {
         Self(Some(INTERNAL_BOUND), None)
     }
@@ -152,7 +152,7 @@ pub fn agent(
         .proxy(None)
         .timeout_connect(Some(CONNECT_WITHIN))
         .timeout_recv_response(bounds.limit())
-        .user_agent(concat!("dbdelve/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("Vernier/", env!("CARGO_PKG_VERSION")))
         .tls_config(tls)
         .build();
     // The watched TCP, then TLS: the watch sees ciphertext arrive, which is
@@ -608,7 +608,7 @@ EHziqoisXzppWwn2vAWvoTkc
         static PATH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
         PATH.get_or_init(|| {
             let path =
-                std::env::temp_dir().join(format!("dbdelve-ch-root-{}.pem", std::process::id()));
+                std::env::temp_dir().join(format!("vernier-ch-root-{}.pem", std::process::id()));
             std::fs::write(&path, ROOT).unwrap();
             path.to_string_lossy().into_owned()
         })

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs DBDelve for the current user, out of the unpacked release tarball.
+# Installs Vernier for the current user, out of the unpacked release tarball.
 #
 # Everything lands under ~/.local, so this never needs root and never fights
 # the distribution's package manager over a path it owns.
@@ -26,33 +26,33 @@ refresh() {
 }
 
 if [[ "${1:-}" == --uninstall ]]; then
-  rm -f "$BIN/dbdelve" "$APPS/dbdelve.desktop"
+  rm -f "$BIN/vernier" "$APPS/vernier.desktop"
   for size in "${SIZES[@]}"; do
-    rm -f "$ICONS/${size}x${size}/apps/dbdelve.png"
+    rm -f "$ICONS/${size}x${size}/apps/vernier.png"
   done
   refresh
   # Connections, query history and saved passwords are deliberately left: an
   # uninstall here is usually a reinstall, and they live outside all of this.
-  echo "removed dbdelve -- data in ~/.local/share/dbdelve was left alone"
+  echo "removed vernier -- data in ~/.local/share/vernier was left alone"
   exit 0
 fi
 
 mkdir -p "$BIN" "$APPS"
-install -m 755 "$HERE/dbdelve" "$BIN/dbdelve"
+install -m 755 "$HERE/vernier" "$BIN/vernier"
 # Exec gets the absolute path rather than the bare name the entry ships with:
 # a desktop launches its entries with the session's PATH, and ~/.local/bin only
-# joins that at login -- and only when it already existed. Bare `dbdelve` would
+# joins that at login -- and only when it already existed. Bare `vernier` would
 # leave the icon there and do nothing when clicked, until the next login.
-sed "s|^Exec=dbdelve |Exec=$BIN/dbdelve |" "$HERE/dbdelve.desktop" > "$APPS/dbdelve.desktop"
-chmod 644 "$APPS/dbdelve.desktop"
+sed "s|^Exec=vernier |Exec=$BIN/vernier |" "$HERE/vernier.desktop" > "$APPS/vernier.desktop"
+chmod 644 "$APPS/vernier.desktop"
 for size in "${SIZES[@]}"; do
   mkdir -p "$ICONS/${size}x${size}/apps"
-  install -m 644 "$HERE/icons/dbdelve-$size.png" "$ICONS/${size}x${size}/apps/dbdelve.png"
+  install -m 644 "$HERE/icons/vernier-$size.png" "$ICONS/${size}x${size}/apps/vernier.png"
 done
 refresh
 
-echo "installed $BIN/dbdelve"
+echo "installed $BIN/vernier"
 case ":$PATH:" in
   *":$BIN:"*) ;;
-  *) echo "note: $BIN is not on your PATH, so running dbdelve from a terminal needs a new login -- the menu entry works now regardless" >&2 ;;
+  *) echo "note: $BIN is not on your PATH, so running vernier from a terminal needs a new login -- the menu entry works now regardless" >&2 ;;
 esac

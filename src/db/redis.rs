@@ -74,7 +74,7 @@ pub fn config_from_url(url: &str) -> Result<ServerConfig, String> {
         .to_string();
     if let Some(fragment) = parsed.fragment() {
         return Err(format!(
-            "Connection URL fragment #{fragment} is not one dbdelve can pass to Redis."
+            "Connection URL fragment #{fragment} is not one Vernier can pass to Redis."
         ));
     }
     let database = super::percent_decoded(parsed.path().trim_start_matches('/'))?;
@@ -91,7 +91,7 @@ pub fn config_from_url(url: &str) -> Result<ServerConfig, String> {
             }
             other => {
                 return Err(format!(
-                    "Connection URL parameter {other} is not one dbdelve can pass to Redis."
+                    "Connection URL parameter {other} is not one Vernier can pass to Redis."
                 ));
             }
         }
@@ -182,7 +182,7 @@ fn in_multi(session: &Option<Session>) -> bool {
 #[derive(Default)]
 struct Running {
     /// A user's commands are out, so Cancel has something to stop. Never
-    /// DBDelve's own: a catalog load is not what Cancel is for.
+    /// Vernier's own: a catalog load is not what Cancel is for.
     out: bool,
     /// The id of the session they went out on, once it is dialled.
     id: Option<i64>,
@@ -307,7 +307,7 @@ impl Connection {
         self.run(text, fetch, false)
     }
 
-    /// [`Connection::query`] for commands DBDelve wrote, where a reply saying
+    /// [`Connection::query`] for commands Vernier wrote, where a reply saying
     /// the write did nothing is an error ([`unapplied`]) and stops the rest.
     pub fn generated(&self, text: &str, fetch: Fetch) -> Result<QueryResult, DbError> {
         self.run(text, fetch, true)
@@ -435,7 +435,7 @@ impl Connection {
             };
             error.message = format!("{} {note}", error.message);
         } else if outcome.is_err() && watching && generated && session.is_some() {
-            // DBDelve's own `WATCH`, which would void the user's next `EXEC`.
+            // Vernier's own `WATCH`, which would void the user's next `EXEC`.
             if self
                 .send(&mut session, |client| {
                     client.req_command(&::redis::cmd("UNWATCH"))
@@ -760,7 +760,7 @@ fn client(
     };
     let mut login = RedisConnectionInfo::default()
         .set_protocol(protocol)
-        .set_lib_name("DBDelve", env!("CARGO_PKG_VERSION"));
+        .set_lib_name("Vernier", env!("CARGO_PKG_VERSION"));
     if !server.user.is_empty() {
         login = login.set_username(&server.user);
     }
@@ -2381,8 +2381,8 @@ mod tests {
     }
 
     fn live_config() -> ServerConfig {
-        let url = std::env::var("dbdelve_REDIS_URL").expect("dbdelve_REDIS_URL is required");
-        config_from_url(&url).expect("dbdelve_REDIS_URL should parse")
+        let url = std::env::var("vernier_REDIS_URL").expect("vernier_REDIS_URL is required");
+        config_from_url(&url).expect("vernier_REDIS_URL should parse")
     }
 
     fn live() -> Connection {
@@ -2419,7 +2419,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_development_database_is_fully_seeded() {
         let connection = live();
         assert_eq!(cells(&ran(&connection, "DBSIZE")), [some(&["214"])]);
@@ -2436,7 +2436,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_each_type_reads_back_as_a_grid() {
         let connection = live();
         let hash = ran(&connection, "HGETALL user:1");
@@ -2489,7 +2489,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_scan_follows_its_cursor_to_the_end_or_the_limit() {
         let connection = live();
         let keys = ran(&connection, "SCAN 0 MATCH item:* COUNT 10");
@@ -2567,7 +2567,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_catalog_is_one_keyspace_counted_by_dbsize() {
         let connection = live();
         let catalog = connection.catalog().unwrap();
@@ -2589,7 +2589,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_keys_grid_shows_each_keys_value_or_its_size() {
         let connection = live();
         let all = preview(&connection, &[], Some(1_000));
@@ -2647,7 +2647,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_keys_grid_reads_only_the_keys_it_keeps() {
         let connection = live();
         // This session's own count, which no other test's commands move.
@@ -2670,7 +2670,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_keys_grid_shows_the_start_of_a_long_value_marked_as_cut() {
         // A database of its own, so the seeded one keeps its size.
         let connection = Connection::open(&ServerConfig {
@@ -2705,7 +2705,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_keys_grid_counts_a_big_collection_and_reads_no_more_of_it() {
         let connection = Connection::open(&ServerConfig {
             database: "5".into(),
@@ -2765,7 +2765,7 @@ mod tests {
     /// which value cells take an edit: the connection's tags alone do not say
     /// whether the grid lets one through.
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_keys_grid_edits_a_value_shown_whole_and_no_other() {
         use crate::result_grid::ResultGrid;
         use crate::sql::Mode;
@@ -2830,7 +2830,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_filter_bar_narrows_by_glob_and_type() {
         let connection = live();
         let raw = FilterBar {
@@ -2880,7 +2880,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_keys_glob_metacharacters_match_only_themselves() {
         // A database of its own, so the seeded one keeps its size.
         let connection = Connection::open(&ServerConfig {
@@ -2913,7 +2913,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_key_opens_with_its_types_read() {
         let connection = live();
         for (key, kind, columns, rows) in [
@@ -2964,7 +2964,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_errors_are_the_servers_and_refusals_send_nothing() {
         let connection = live();
         let error = connection
@@ -2991,7 +2991,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_multi_queues_on_the_one_session_until_exec() {
         let connection = live();
         ran(&connection, "DEL live:multi");
@@ -3022,7 +3022,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_user_with_no_password_logs_in_as_that_user() {
         let admin = live();
         let server = ServerConfig {
@@ -3041,7 +3041,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_scan_still_lists_keys_a_user_may_not_describe() {
         let admin = live();
         let server = with_user(&admin, "live_scanonly", "on >pw ~* +scan +select");
@@ -3059,7 +3059,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_run_that_fails_inside_a_multi_does_not_leave_it_open() {
         let connection = live();
         let error = connection
@@ -3070,7 +3070,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_command_name_is_sent_as_typed() {
         let connection = live();
         let error = connection
@@ -3080,7 +3080,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_cancel_kills_a_blocked_command_and_the_next_one_redials() {
         let connection = live();
         let started = Instant::now();
@@ -3104,7 +3104,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_statement_timeout_stops_a_blocked_command() {
         let connection = Connection::open(&ServerConfig {
             statement_timeout: 1,
@@ -3125,7 +3125,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_prefer_falls_back_to_a_server_that_speaks_no_tls_and_require_does_not() {
         let connection = Connection::open(&ServerConfig {
             sslmode: SslMode::Prefer,
@@ -3214,7 +3214,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_the_keys_grid_writes_back_values_ttls_and_names() {
         let connection = scratch("live:keys:");
         ran(&connection, "SET live:keys:a hello");
@@ -3335,7 +3335,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_small_collections_json_is_edited_from_the_keys_grid() {
         let prefix = "live:json:";
         let connection = spare(prefix);
@@ -3391,7 +3391,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_collection_changed_since_it_was_read_is_not_written() {
         let prefix = "live:raced:";
         let connection = spare(prefix);
@@ -3449,7 +3449,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_collection_grown_past_its_read_is_not_written() {
         let prefix = "live:grown:";
         let connection = spare(prefix);
@@ -3490,7 +3490,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_an_opened_key_writes_back_its_own_type() {
         let connection = scratch("live:open:");
         let read = |key: &str, kind: &str| redis_cmd::browse::read(key, kind, 100).unwrap();
@@ -3602,7 +3602,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_list_item_changed_since_it_was_read_is_not_written() {
         let connection = scratch("live:shift:");
         let other = scratch("live:shift:");
@@ -3643,7 +3643,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_value_edit_never_brings_back_a_deleted_key_or_replaces_another_type() {
         let connection = scratch("live:stale:");
         let other = scratch("live:stale:");
@@ -3687,7 +3687,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_renaming_a_member_onto_one_already_there_is_refused() {
         let connection = scratch("live:rename:");
         let read = |key: &str, kind: &str| redis_cmd::browse::read(key, kind, 100).unwrap();
@@ -3717,7 +3717,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_an_edit_is_refused_while_a_query_tab_holds_the_session_in_a_multi() {
         let connection = scratch("live:multi:");
         ran(&connection, "HSET live:multi:h f 1");
@@ -3771,7 +3771,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_cancel_that_skips_an_exec_closes_the_session_and_its_multi() {
         let connection = scratch("live:skipped:");
         ran(&connection, "MULTI");
@@ -3795,7 +3795,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_listing_databases_and_the_catalog_queue_nothing_into_a_users_multi() {
         let admin = live();
         let server = ServerConfig {
@@ -3816,7 +3816,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_REDIS_URL"]
+    #[ignore = "requires the repository development database configured through vernier_REDIS_URL"]
     fn live_a_list_edit_is_refused_while_a_query_tab_holds_a_watch() {
         let connection = scratch("live:watched:");
         let other = scratch("live:watched:");
@@ -3866,14 +3866,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and Redis configured through dbdelve_SSH_CONFIG and dbdelve_REDIS_URL"]
+    #[ignore = "requires the dev bastions and Redis configured through vernier_SSH_CONFIG and vernier_REDIS_URL"]
     fn live_ssh_a_command_and_a_cancel_run_through_the_bastion() {
         // The compose server as the bastion sees it, by service name and the
         // port inside the network.
         let connection = Connection::open(&ServerConfig {
             host: "redis".into(),
             port: Some(DEFAULT_PORT),
-            ssh: live_bastion("dbdelve-bastion"),
+            ssh: live_bastion("vernier-bastion"),
             ..live_config()
         })
         .expect("connection should open");
@@ -3904,7 +3904,7 @@ mod tests {
 
     crate::db::conformance::suite!(
         live_conformance,
-        "requires the repository development database configured through dbdelve_REDIS_URL",
+        "requires the repository development database configured through vernier_REDIS_URL",
         conformance_subject:
         connects,
         catalog_round_trip,

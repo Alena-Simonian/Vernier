@@ -1064,10 +1064,10 @@ source: src/sql_snapshots.rs
   error: |There is nothing in this row to insert.|
 
 [mongodb] mongo operator field name
-  error: |`$set` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator.|
+  error: |`$set` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator.|
 
 [mongodb] mongo operator value
-  error: |x: a field name starting with `$` inside a value is an operator, which DBDelve does not write.|
+  error: |x: a field name starting with `$` inside a value is an operator, which Vernier does not write.|
 
 [mongodb] mongo name id
   |db.getCollection("accounts").insertOne({"id": 42})|
@@ -1304,7 +1304,7 @@ source: src/sql_snapshots.rs
   error: |0 is not a TTL: it is a number of seconds above zero, and zero or less would delete the key.|
 
 [redis] redis other table
-  error: |other is not a grid DBDelve writes to.|
+  error: |other is not a grid Vernier writes to.|
 
 [redis] redis list index
   error: |A new item goes at the end of the list: leave its index empty.|

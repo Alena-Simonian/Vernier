@@ -159,7 +159,7 @@ pub fn render_rows_as(
 /// different callers to answer for: `quote_value` also spells a value typed
 /// into a filter bar or an edit, free text that must stay a quoted string
 /// unless it is `SqlServer`'s own hex shape (its one unquoted path in).
-/// `insert_literal`'s value, by contrast, is never anything but what dbdelve
+/// `insert_literal`'s value, by contrast, is never anything but what vernier
 /// itself rendered (`mssql::render`, `mysql::render`, `sqlite::render`), so a
 /// shape check alone is enough.
 fn insert_literal(engine: Engine, cell: Option<&str>, column: &Column) -> String {

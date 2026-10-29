@@ -9,7 +9,7 @@
 //! The cost is that there is no session. Nothing set in one submission reaches
 //! the next, an open transaction included, and the API refuses a `USE` outright
 //! ("Command not supported by SQL API: USE") rather than running one it would
-//! then forget. That is the engine's behaviour and dbdelve does not paper over
+//! then forget. That is the engine's behaviour and vernier does not paper over
 //! it: names are qualified, or resolve against the profile's database and
 //! active schema, which ride on every request as fields instead.
 
@@ -646,7 +646,7 @@ impl Connection {
             // on the statement: that is polled, a short request at a time.
             .timeout_recv_response(Some(Duration::from_secs(120)))
             .timeout_recv_body(Some(recv_body(config)))
-            .user_agent(concat!("dbdelve/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("Vernier/", env!("CARGO_PKG_VERSION")))
             .build()
             .into();
         let connection = Self {
@@ -663,7 +663,7 @@ impl Connection {
         Ok(connection)
     }
 
-    /// The user's statements resolve in `schema` from here on. dbdelve's own
+    /// The user's statements resolve in `schema` from here on. vernier's own
     /// are qualified and never sent one.
     pub fn set_schema(&self, schema: Option<&str>) {
         *self
@@ -823,7 +823,7 @@ impl Connection {
         self.submit(sql, Cancellable::Yes(cancel), fetch, schema.as_deref())
     }
 
-    /// [`Self::query_with`] outside the active schema, for a statement dbdelve
+    /// [`Self::query_with`] outside the active schema, for a statement vernier
     /// wrote for the user to run: a relation's preview or an applied edit.
     pub fn generated(
         &self,
@@ -834,7 +834,7 @@ impl Connection {
         self.submit(sql, Cancellable::Yes(cancel), fetch, None)
     }
 
-    /// The same, for a statement dbdelve wrote and the user cannot see.
+    /// The same, for a statement vernier wrote and the user cannot see.
     ///
     /// Submitted synchronously: nothing offers to cancel a catalog load, and
     /// the handle a cancel would need is the only thing the extra round trip
@@ -1142,7 +1142,7 @@ impl Connection {
             .ok_or_else(|| plain_error(format!("{name} has no definition to show.")))
     }
 
-    /// Run statements dbdelve wrote all at the same time, in their own order.
+    /// Run statements vernier wrote all at the same time, in their own order.
     ///
     /// One thread each, because there is no connection to serialise them on:
     /// this engine is an HTTP client and each statement is its own request. It
@@ -1611,7 +1611,7 @@ mod tests {
     #[test]
     fn the_statement_is_sent_exactly_as_written() {
         // Odd spacing, a trailing comment and no semicolon: none of it is
-        // dbdelve's to tidy.
+        // vernier's to tidy.
         let sql = "select  1 -- one\n  ,2";
         assert_eq!(request_body(&config("k"), sql, None)["statement"], sql);
     }
@@ -1805,21 +1805,21 @@ mod tests {
         // runs anywhere, and what it pins is that the TLS provider is there at
         // run time -- a missing one panics rather than failing the connect.
         let mut config = config("test-key-2048.p8");
-        config.account = "dbdelve-no-such-account".into();
+        config.account = "vernier-no-such-account".into();
         let error = Connection::open(&config).err().expect("nobody is there");
         println!("{error}");
         assert!(!error.message.is_empty());
     }
 
-    const LIVE: &str = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*";
+    const LIVE: &str = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*";
 
     /// ACCOUNT, USER, PRIVATE_KEY (an absolute path) and DATABASE are required;
     /// WAREHOUSE, ROLE and HOST are taken when set.
     fn live_config() -> SnowflakeConfig {
         let required = |name: &str| {
-            std::env::var(format!("DBDELVE_SNOWFLAKE_{name}")).unwrap_or_else(|_| panic!("{LIVE}"))
+            std::env::var(format!("VERNIER_SNOWFLAKE_{name}")).unwrap_or_else(|_| panic!("{LIVE}"))
         };
-        let optional = |name: &str| std::env::var(format!("DBDELVE_SNOWFLAKE_{name}")).ok();
+        let optional = |name: &str| std::env::var(format!("VERNIER_SNOWFLAKE_{name}")).ok();
         SnowflakeConfig {
             account: required("ACCOUNT"),
             host: optional("HOST"),
@@ -1834,7 +1834,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_query_round_trip() {
         let connection = Connection::open(&live_config()).expect("connects");
         let result = connection
@@ -1860,7 +1860,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_every_temporal_type_renders_as_the_server_would_print_it() {
         // The wire forms in `render` are from the API's documentation; this is
         // the server agreeing with them, compared against its own TO_VARCHAR.
@@ -1885,7 +1885,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_several_statements_return_the_last_result() {
         let connection = Connection::open(&live_config()).expect("connects");
         let result = connection.query("SELECT 1; SELECT 2 AS two").expect("runs");
@@ -1893,7 +1893,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_a_large_result_arrives_whole_across_partitions() {
         let connection = Connection::open(&live_config()).expect("connects");
         let result = connection
@@ -1903,7 +1903,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_cancel_stops_a_running_statement() {
         let connection = Connection::open(&live_config()).expect("connects");
         let (waiting, run) = (connection.clone(), CancelToken::default());
@@ -1921,7 +1921,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_a_statement_timeout_stops_a_statement() {
         let mut config = live_config();
         config.statement_timeout = 3;
@@ -1935,7 +1935,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_the_databases_are_listed_and_a_schema_scopes_the_users_statements() {
         let connection = Connection::open(&live_config()).expect("connects");
         let databases = connection.databases().expect("listed");
@@ -1956,7 +1956,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_a_use_is_refused_rather_than_quietly_forgotten() {
         // The statelessness the module header describes, pinned. The API does
         // not run a `USE` and then lose it between requests; it declines to run
@@ -2177,17 +2177,17 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_catalog_and_structure_round_trip() {
         // Needs a warehouse and the right to create a schema in the database.
         let connection = Connection::open(&live_config()).expect("connects");
         connection
             .query(
-                "CREATE OR REPLACE SCHEMA DBDELVE_TEST; \
-                 CREATE TABLE DBDELVE_TEST.ORDERS (ID NUMBER(38,0) PRIMARY KEY, NOTE VARCHAR(40) DEFAULT 'x'); \
-                 CREATE TABLE DBDELVE_TEST.ORDER_LINES (ORDER_ID NUMBER(38,0) NOT NULL REFERENCES DBDELVE_TEST.ORDERS (ID), \
+                "CREATE OR REPLACE SCHEMA VERNIER_TEST; \
+                 CREATE TABLE VERNIER_TEST.ORDERS (ID NUMBER(38,0) PRIMARY KEY, NOTE VARCHAR(40) DEFAULT 'x'); \
+                 CREATE TABLE VERNIER_TEST.ORDER_LINES (ORDER_ID NUMBER(38,0) NOT NULL REFERENCES VERNIER_TEST.ORDERS (ID), \
                      LINE NUMBER(38,0) NOT NULL, SEEN TIMESTAMP_NTZ, PRIMARY KEY (ORDER_ID, LINE)); \
-                 CREATE VIEW DBDELVE_TEST.RECENT AS SELECT * FROM DBDELVE_TEST.ORDERS",
+                 CREATE VIEW VERNIER_TEST.RECENT AS SELECT * FROM VERNIER_TEST.ORDERS",
             )
             .expect("the fixture schema is created");
 
@@ -2195,7 +2195,7 @@ mod tests {
         let schema = catalog
             .schemas
             .iter()
-            .find(|schema| schema.name == "DBDELVE_TEST")
+            .find(|schema| schema.name == "VERNIER_TEST")
             .expect("the schema is listed");
         let kinds: Vec<_> = schema
             .relations
@@ -2218,7 +2218,7 @@ mod tests {
         );
 
         let lines = connection
-            .structure("DBDELVE_TEST", "ORDER_LINES")
+            .structure("VERNIER_TEST", "ORDER_LINES")
             .expect("described");
         println!("{lines:#?}");
         assert_eq!(lines.columns[0].data_type, "number(38,0)");
@@ -2227,21 +2227,21 @@ mod tests {
         assert_eq!(lines.constraints.len(), 2);
         // A view has columns and no keys, and asking is not an error.
         let view = connection
-            .structure("DBDELVE_TEST", "RECENT")
+            .structure("VERNIER_TEST", "RECENT")
             .expect("described");
         assert_eq!(view.columns.len(), 2);
         assert!(view.constraints.is_empty());
         let ddl = connection
-            .ddl("DBDELVE_TEST", "ORDERS", super::super::RelationKind::Table)
+            .ddl("VERNIER_TEST", "ORDERS", super::super::RelationKind::Table)
             .expect("the table's DDL loads");
         assert!(ddl.contains("ORDERS") && ddl.contains("NOTE"), "{ddl}");
         let ddl = connection
-            .ddl("DBDELVE_TEST", "RECENT", super::super::RelationKind::View)
+            .ddl("VERNIER_TEST", "RECENT", super::super::RelationKind::View)
             .expect("the view's DDL loads");
         assert!(ddl.to_ascii_lowercase().contains("view"), "{ddl}");
 
         connection
-            .query("DROP SCHEMA DBDELVE_TEST")
+            .query("DROP SCHEMA VERNIER_TEST")
             .expect("cleaned up");
     }
 
@@ -2362,7 +2362,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_a_filter_matches_what_its_operator_says() {
         use crate::filter::Operator;
         let connection = Connection::open(&live_config()).expect("connects");
@@ -2386,7 +2386,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_every_operator_is_a_statement_the_server_accepts() {
         use crate::filter::Operator;
         let connection = Connection::open(&live_config()).expect("connects");
@@ -2410,7 +2410,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires a Snowflake account configured through DBDELVE_SNOWFLAKE_*"]
+    #[ignore = "requires a Snowflake account configured through VERNIER_SNOWFLAKE_*"]
     fn live_the_explorer_does_not_wait_on_the_routines() {
         // The relations are what the explorer opens with, so the half that is
         // reliably slower must not be in front of them.
@@ -2481,7 +2481,7 @@ mod tests {
             .find(|request| request.body["statement"] == sql)
             .expect("submitted");
         assert_eq!(submit.target, "?async=true");
-        assert_eq!(submit.body["database"], "DBDELVE_TEST");
+        assert_eq!(submit.body["database"], "VERNIER_TEST");
         assert_eq!(submit.body["warehouse"], "COMPUTE_WH");
         assert_eq!(
             submit.header("X-Snowflake-Authorization-Token-Type"),
@@ -2496,7 +2496,7 @@ mod tests {
     }
 
     #[test]
-    fn a_schema_set_on_one_clone_scopes_every_users_statement_and_nothing_of_dbdelves() {
+    fn a_schema_set_on_one_clone_scopes_every_users_statement_and_nothing_of_verniers() {
         let mock = Mock::start();
         let sql = "SELECT 1 AS one, NULL AS nothing, '' AS blank, DATE '2024-02-29' AS leap";
         mock.answer(sql, "query");
@@ -3190,7 +3190,7 @@ mod tests {
     fn the_catalog_routines_and_structure_are_read_from_recorded_answers() {
         use super::super::{RelationKind, RoutineKind};
         let mock = Mock::start();
-        let within = "IN SCHEMA \"DBDELVE_TEST\".\"SALES\"";
+        let within = "IN SCHEMA \"VERNIER_TEST\".\"SALES\"";
         for (statement, name) in [
             ("FROM INFORMATION_SCHEMA.TABLES", "relations"),
             ("FROM INFORMATION_SCHEMA.FUNCTIONS", "functions"),
@@ -3305,7 +3305,7 @@ mod tests {
         assert_eq!(view.columns.len(), 3);
         assert!(view.constraints.is_empty() && view.foreign_keys.is_empty());
 
-        // dbdelve's own statements skip the asynchronous round trip.
+        // vernier's own statements skip the asynchronous round trip.
         assert!(
             mock.requests()
                 .iter()

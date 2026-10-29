@@ -432,7 +432,7 @@ impl Render for Notification {
             .border_color(cx.theme().border)
             .bg(cx.theme().tokens.popover)
             .rounded(cx.theme().radius_lg)
-            // dbdelve patch: frosted like a popup, shadowless for the same
+            // vernier patch: frosted like a popup, shadowless for the same
             // reason (see `popover_style`). The blur is set by the fade below.
             .when(!frosted, |this| this.shadow(toast_shadow(1.)))
             .py_3p5()
@@ -539,7 +539,7 @@ impl Render for Notification {
     }
 }
 
-/// dbdelve patch: what a fading toast carries at `opacity`. The shadow ramps by
+/// vernier patch: what a fading toast carries at `opacity`. The shadow ramps by
 /// the cube of the fade, as upstream; on frost there is no shadow, and the blur,
 /// which ignores `opacity`, ramps with the fade instead of popping in or out.
 fn toast_ink<E: Styled>(mut toast: E, frosted: bool, opacity: f32) -> E {

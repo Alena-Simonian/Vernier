@@ -3,7 +3,7 @@
 //!
 //! There is no connection to think about. The files open in a DuckDB profile
 //! held in memory -- one that is found if it exists and made if it does not --
-//! each in a query tab of its own whose statement is the one DBDelve wrote to
+//! each in a query tab of its own whose statement is the one Vernier wrote to
 //! read it, on screen and the user's to change: `SELECT * FROM read_csv(…)`.
 //! The file itself is only ever read.
 
@@ -54,7 +54,7 @@ impl Workspace {
         let statements: Vec<String> = paths.iter().filter_map(|path| reading(path)).collect();
         if statements.is_empty() {
             self.note(
-                "DBDelve opens .csv, .tsv, .parquet, .json and .xlsx files.".to_string(),
+                "Vernier opens .csv, .tsv, .parquet, .json and .xlsx files.".to_string(),
                 cx,
             );
             return;
@@ -205,7 +205,7 @@ mod tests {
     #[test]
     fn a_file_whose_name_reads_as_a_pattern_is_read_alone() {
         use crate::db::{CancelToken, Connection, Fetch};
-        let dir = std::env::temp_dir().join(format!("dbdelve-files-glob-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vernier-files-glob-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let mut files = vec![
             ("br[a].csv", "bra.csv"),

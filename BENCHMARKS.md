@@ -1,6 +1,6 @@
 # Benchmarks
 
-DBDelve 0.3.6 against DBeaver 25.3.1, measured on 2026-10-11. The numbers go
+Vernier 0.3.6 against DBeaver 25.3.1, measured on 2026-10-11. The numbers go
 stale with every release; each run says which version it measured.
 
 ## Setup
@@ -12,7 +12,7 @@ stale with every release; each run says which version it measured.
   apps spend part of their time waiting on it.
 - **Table:** `events`, 1,000,000 rows × 107 columns, 3 GB on disk.
 - **Query:** `SELECT * FROM events LIMIT n` for n = 100, 1,000, 100,000 and
-  1,000,000, with the row limit turned off in both apps (DBDelve
+  1,000,000, with the row limit turned off in both apps (Vernier
   `preview_rows = 0`, DBeaver `resultset.maxrows = 2000000`).
 - **DBeaver's heap:** raised to 16 GB with `-Xmx16g`. At its default 1 GB it
   runs out of memory at about 43,000 rows of this table. By default DBeaver
@@ -43,7 +43,7 @@ out and redone.
 
 Launch, median of 20 cold launches:
 
-| | DBDelve | DBeaver |
+| | Vernier | DBeaver |
 |---|---|---|
 | Launch to a connected window with the schema tree loaded | 1.13 s | 5.20 s |
 | CPU spent launching | 0.48 s | 13.6 s |
@@ -52,7 +52,7 @@ Launch, median of 20 cold launches:
 
 Queries:
 
-| Rows | Time, DBDelve | Time, DBeaver | CPU, DBDelve | CPU, DBeaver | Memory, DBDelve | Memory, DBeaver | After release, DBDelve | After release, DBeaver |
+| Rows | Time, Vernier | Time, DBeaver | CPU, Vernier | CPU, DBeaver | Memory, Vernier | Memory, DBeaver | After release, Vernier | After release, DBeaver |
 |---|---|---|---|---|---|---|---|---|
 | 100 | 0.16 s | 1.70 s | 0.05 s | 1.1 s | 186 MB | 578 MB | 174 MB | 579 MB |
 | 1,000 | 0.21 s | 1.96 s | 0.08 s | 2.0 s | 191 MB | 604 MB | 179 MB | 604 MB |

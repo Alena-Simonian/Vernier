@@ -64,7 +64,7 @@ impl Workspace {
                 // draw, and guessing at them would be inventing a table.
                 let StructureState::Loaded(structure) = structure else {
                     self.note(
-                        "DBDelve has not read this relation's columns yet.".into(),
+                        "Vernier has not read this relation's columns yet.".into(),
                         cx,
                     );
                     return;
@@ -175,11 +175,11 @@ impl Workspace {
             }
         };
         // The gate every generated statement passes before anything executes
-        // (`AGENTS.md` rule 2). Failing it is dbdelve disagreeing with itself --
-        // a bug in dbdelve rather than a user error -- so it is said and not run.
+        // (`AGENTS.md` rule 2). Failing it is vernier disagreeing with itself --
+        // a bug in vernier rather than a user error -- so it is said and not run.
         if !sql::is_generated_write_on(engine, &statement) {
             self.note(
-                "dbdelve refused to run a statement it wrote itself: it is not an INSERT.".into(),
+                "Vernier refused to run a statement it wrote itself: it is not an INSERT.".into(),
                 cx,
             );
             return;
@@ -528,7 +528,7 @@ impl Workspace {
     }
 
     /// Sorting a query the user wrote: the `ORDER BY` goes into their statement,
-    /// where they can see it, edit it and undo it. dbdelve changes SQL only when
+    /// where they can see it, edit it and undo it. vernier changes SQL only when
     /// asked, and a header click is the ask (`AGENTS.md`, rule 1).
     pub(crate) fn query_sort(
         &mut self,
@@ -658,7 +658,7 @@ impl Workspace {
         let Some(mut keys) = sql::order_by(engine, statement) else {
             self.note(
                 format!(
-                    "dbdelve cannot add {} to this statement without rewriting it.",
+                    "Vernier cannot add {} to this statement without rewriting it.",
                     engine.sort_clause()
                 ),
                 cx,
@@ -748,7 +748,7 @@ impl Workspace {
         // the commit -- which is where the mode prompt is raised.
         //
         // Which of the two refusals this is, read off `editable` rather than off
-        // an edit target the grid deliberately does not expose: a result dbdelve
+        // an edit target the grid deliberately does not expose: a result vernier
         // cannot trace to one table has no editable cell anywhere in the row,
         // and one it can has this column alone refused.
         // A snapshot written before edit targets were kept has none, so it
@@ -788,7 +788,7 @@ impl Workspace {
                     _ => "These rows are from an earlier session. Refresh them to edit.".into(),
                 },
                 (false, None, false, false) => {
-                    "dbdelve cannot tell which table these rows come from.".into()
+                    "Vernier cannot tell which table these rows come from.".into()
                 }
             },
             cx,
@@ -810,7 +810,7 @@ impl Workspace {
     }
 
     /// `DEFAULT`, which is the server resolving the column's default rather
-    /// than dbdelve guessing at what it would be — the structure reports a
+    /// than vernier guessing at what it would be — the structure reports a
     /// default's *presence*, and sometimes as a marker word rather than an
     /// expression.
     pub(crate) fn set_default(
@@ -1188,7 +1188,7 @@ impl Workspace {
             return;
         }
         // Browsing surfaces only. A query tab's grid is a view of the user's own
-        // statement, and a delete there would be dbdelve writing into a buffer to
+        // statement, and a delete there would be vernier writing into a buffer to
         // destroy rows -- bar an engine that takes them there
         // (`Engine::edits_query_rows`), where the delete is reviewed as a
         // relation's is and the buffer is left be.
@@ -1205,7 +1205,7 @@ impl Workspace {
         let grid = results.read(cx);
         let unnameable = grid.delegate().read_only_reason().map_or_else(
             || {
-                "dbdelve cannot name this row by its primary key, so it will not delete it."
+                "Vernier cannot name this row by its primary key, so it will not delete it."
                     .to_string()
             },
             str::to_string,
@@ -1238,8 +1238,8 @@ impl Workspace {
         // Both halves of the admission, before anything is shown: the gate every
         // generated statement passes (`AGENTS.md` rule 2), and the readout it
         // cannot give alone — that the predicate is this row's key and not some
-        // other set of columns. Failing either is dbdelve disagreeing with itself,
-        // a bug in dbdelve rather than a user error, so it is said and not run.
+        // other set of columns. Failing either is vernier disagreeing with itself,
+        // a bug in vernier rather than a user error, so it is said and not run.
         let columns: Vec<&str> = borrowed
             .iter()
             .map(|&(column, _)| column)
@@ -1249,7 +1249,7 @@ impl Workspace {
             || !sql::delete_matches_key_on(engine, &statement, &columns)
         {
             self.note(
-                "dbdelve refused to run a statement it wrote itself: it is not a DELETE of one row \
+                "Vernier refused to run a statement it wrote itself: it is not a DELETE of one row \
                  by its primary key."
                     .into(),
                 cx,
@@ -1514,7 +1514,7 @@ impl Workspace {
     }
 
     /// The plan pane's copy button: the server's plan exactly as it arrived,
-    /// unedited by anything dbdelve draws over it. Ticks the same way
+    /// unedited by anything vernier draws over it. Ticks the same way
     /// `copy_row_field` does, but with one flag rather than a keyed slot,
     /// since only one plan pane is ever on screen at a time.
     pub(crate) fn copy_plan(&mut self, cx: &mut Context<Self>) {
@@ -1675,12 +1675,12 @@ impl Workspace {
             }
         };
         // The gate every generated statement passes before anything executes
-        // (`AGENTS.md` rule 2). Failing it means dbdelve wrote something outside
-        // the shapes the gate names, which is a bug in dbdelve rather than a user
+        // (`AGENTS.md` rule 2). Failing it means vernier wrote something outside
+        // the shapes the gate names, which is a bug in vernier rather than a user
         // error.
         if !sql::is_generated_write_on(self.engine(), &batch) {
             self.note(
-                "dbdelve refused to run a statement it wrote itself: it is not an UPDATE.".into(),
+                "Vernier refused to run a statement it wrote itself: it is not an UPDATE.".into(),
                 cx,
             );
             return;
@@ -1729,7 +1729,7 @@ impl Workspace {
         let (id, editor) = (tab.id, tab.editor.clone());
         let Some(refresh) = tab.apply_refresh() else {
             self.note(
-                "dbdelve does not know which statement produced these rows.".into(),
+                "Vernier does not know which statement produced these rows.".into(),
                 cx,
             );
             return;
@@ -1765,7 +1765,7 @@ impl Workspace {
                 Some(refresh) => refresh,
                 None => {
                     self.note(
-                        "dbdelve does not know which statement produced these rows.".into(),
+                        "Vernier does not know which statement produced these rows.".into(),
                         cx,
                     );
                     return;

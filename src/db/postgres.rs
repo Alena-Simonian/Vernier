@@ -382,7 +382,7 @@ SELECT
     CASE WHEN attribute.attnum = ANY (index_entry.indkey) THEN 'yes' ELSE 'no' END
         AS in_primary_key
 -- An inner join on the primary index is what makes a table without one
--- return nothing, which is the same answer as a table DBDelve cannot identify
+-- return nothing, which is the same answer as a table Vernier cannot identify
 -- rows in.
 FROM pg_catalog.pg_index AS index_entry
 JOIN pg_catalog.pg_class AS class
@@ -415,11 +415,11 @@ pub fn config_from_url(url: &str) -> Result<ServerConfig, String> {
         || url_parts
             .query_pairs()
             .any(|(key, _)| key.as_ref() == "port");
-    // The two keys dbdelve owns come out of the URL before the driver sees
+    // The two keys vernier owns come out of the URL before the driver sees
     // it. Its parser has a fixed key list and refuses anything outside it,
     // so `sslrootcert` would die as "invalid connection string" and so
     // would `sslmode=verify-full` — naming neither the option nor the
-    // reason. dbdelve carries both itself and re-emits an `sslmode` the
+    // reason. vernier carries both itself and re-emits an `sslmode` the
     // driver does know.
     let mut sslmode = tls::SslMode::default();
     let mut root_certificate = None;
@@ -505,7 +505,7 @@ fn connection_string(server: &ServerConfig) -> String {
     if !server.password.is_empty() {
         parts.push(format!("password={}", quote(&server.password)));
     }
-    // The driver's three rungs, not dbdelve's five. Verification above
+    // The driver's three rungs, not vernier's five. Verification above
     // `require` belongs to the connector `tls::connector` builds, and
     // handing the driver a word it does not know fails the whole parse.
     parts.push(format!("sslmode={}", server.sslmode.driver_mode()));
@@ -517,7 +517,7 @@ fn connection_string(server: &ServerConfig) -> String {
         // A session default set once, here, rather than a `SET` prepended to
         // the user's submission -- see `ServerConfig::statement_timeout`. It
         // rides in as a startup option because `options` is the only channel
-        // libpq has for one, and nothing collides with it: dbdelve's URL parser
+        // libpq has for one, and nothing collides with it: vernier's URL parser
         // has no `options` field, so a user-supplied one never reaches here.
         // `statement_timeout` counts milliseconds when given a bare number.
         parts.push(format!(
@@ -908,7 +908,7 @@ impl Connection {
     /// server reports nothing about whether the request landed, and it may
     /// arrive after the statement has already finished. So `Ok` here means the
     /// request was delivered, never that anything stopped -- what the query
-    /// eventually returned is the only account dbdelve gives of that.
+    /// eventually returned is the only account vernier gives of that.
     pub fn cancel(&self) -> Result<(), DbError> {
         if let Some(tunnel) = &self.tunnel {
             tunnel.dial()?;
@@ -943,7 +943,7 @@ impl Connection {
         result
     }
 
-    /// dbdelve's own SQL. Its column types are never shown, so it does not pay
+    /// vernier's own SQL. Its column types are never shown, so it does not pay
     /// for the extra round trip that learns them.
     fn internal_query(&self, sql: &str) -> Result<QueryResult, DbError> {
         self.run(sql, false, Fetch::default())
@@ -999,7 +999,7 @@ impl Connection {
         // Types are learned after the statement ran, and only from a single
         // statement that returned columns. A refused `Parse` is an error
         // inside the session's open transaction and aborts it, so describing
-        // first meant dbdelve's own probe ended the user's transaction and every
+        // first meant vernier's own probe ended the user's transaction and every
         // later failure reported "current transaction is aborted" instead of
         // its cause. Postgres refuses to prepare more than one statement at a
         // time, which is exactly the case that used to do the damage.
@@ -1813,7 +1813,7 @@ mod tests {
         ServerConfig {
             host: "db.example.test".into(),
             port: Some(8432),
-            database: "dbdelve_test".into(),
+            database: "vernier_test".into(),
             user: "someone".into(),
             password: String::new(),
             sslmode: SslMode::default(),
@@ -1903,7 +1903,7 @@ mod tests {
         let config = config();
         assert_eq!(
             connection_string(&config),
-            "host='db.example.test' dbname='dbdelve_test' user='someone' port=8432 \
+            "host='db.example.test' dbname='vernier_test' user='someone' port=8432 \
              sslmode=prefer connect_timeout=10"
         );
     }
@@ -1958,11 +1958,11 @@ mod tests {
     fn live_a_blank_password_signs_in_from_the_password_file() {
         use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};
 
-        const CHILD: &str = "DBDELVE_PGPASS_CHILD";
+        const CHILD: &str = "VERNIER_PGPASS_CHILD";
         let name = "db::postgres::tests::live_a_blank_password_signs_in_from_the_password_file";
         if std::env::var_os(CHILD).is_none() {
             let directory =
-                std::env::temp_dir().join(format!("dbdelve-pgpass-{}", std::process::id()));
+                std::env::temp_dir().join(format!("vernier-pgpass-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&directory);
             std::fs::DirBuilder::new()
                 .mode(0o700)
@@ -2075,7 +2075,7 @@ mod tests {
     #[ignore = "requires a local Postgres server configured through PG*"]
     fn live_an_active_schema_keeps_the_roles_own_search_path_after_it() {
         let admin = Connection::open(&live_config()).expect("connection should open");
-        let role = format!("dbdelve_schema_tail_{}", std::process::id());
+        let role = format!("vernier_schema_tail_{}", std::process::id());
         let run = |sql: &str| {
             admin
                 .query(sql, Fetch::default())
@@ -2201,7 +2201,7 @@ mod tests {
     #[test]
     fn url_populates_fields_without_inventing_a_port() {
         let config =
-            config_from_url("postgresql://person%40example.com@db.example.test/dbdelve_test")
+            config_from_url("postgresql://person%40example.com@db.example.test/vernier_test")
                 .unwrap();
 
         assert_eq!(
@@ -2209,7 +2209,7 @@ mod tests {
             ServerConfig {
                 host: "db.example.test".into(),
                 port: None,
-                database: "dbdelve_test".into(),
+                database: "vernier_test".into(),
                 user: "person@example.com".into(),
                 password: String::new(),
                 sslmode: SslMode::default(),
@@ -2224,7 +2224,7 @@ mod tests {
     #[test]
     fn url_preserves_an_explicit_port_and_password() {
         let config =
-            config_from_url("postgres://someone:pa%20ss@db.example.test:8432/dbdelve_demo")
+            config_from_url("postgres://someone:pa%20ss@db.example.test:8432/vernier_demo")
                 .unwrap();
 
         assert_eq!(config.port, Some(8432));
@@ -2245,20 +2245,20 @@ mod tests {
             ("verify-ca", SslMode::VerifyCa),
             ("verify-full", SslMode::VerifyFull),
         ] {
-            let url = format!("postgresql://someone@db.example.test/dbdelve_test?sslmode={mode}");
+            let url = format!("postgresql://someone@db.example.test/vernier_test?sslmode={mode}");
             assert_eq!(config_from_url(&url).unwrap().sslmode, expected, "{url}");
         }
     }
 
     #[test]
-    fn the_two_keys_dbdelve_owns_are_kept_away_from_the_drivers_parser() {
+    fn the_two_keys_vernier_owns_are_kept_away_from_the_drivers_parser() {
         // The driver knows neither `verify-full` nor `sslrootcert` and refuses
         // the whole string for either, naming nothing useful. Both have to be
         // taken out of the URL before it reaches that parser, and everything
         // else has to survive the round trip.
         let config = config_from_url(
-            "postgresql://someone@db.example.test:5433/dbdelve_test\
-             ?sslmode=verify-full&sslrootcert=/tmp/rds.pem&application_name=dbdelve",
+            "postgresql://someone@db.example.test:5433/vernier_test\
+             ?sslmode=verify-full&sslrootcert=/tmp/rds.pem&application_name=vernier",
         )
         .unwrap();
 
@@ -2269,9 +2269,9 @@ mod tests {
     }
 
     #[test]
-    fn a_url_asking_for_a_mode_dbdelve_cannot_honour_says_so() {
+    fn a_url_asking_for_a_mode_vernier_cannot_honour_says_so() {
         assert!(
-            config_from_url("postgresql://someone@db.example.test/dbdelve_test?sslmode=allow")
+            config_from_url("postgresql://someone@db.example.test/vernier_test?sslmode=allow")
                 .unwrap_err()
                 .contains("allow")
         );
@@ -2283,17 +2283,17 @@ mod tests {
         // there is none -- and pushes `?port=` after it, so reading the first
         // entry connected to a different server than the URL named.
         for (url, expected) in [
-            ("postgresql://someone@db.example.test/dbdelve_test", None),
+            ("postgresql://someone@db.example.test/vernier_test", None),
             (
-                "postgresql://someone@db.example.test:5433/dbdelve_test",
+                "postgresql://someone@db.example.test:5433/vernier_test",
                 Some(5433),
             ),
             (
-                "postgresql://someone@db.example.test/dbdelve_test?port=6000",
+                "postgresql://someone@db.example.test/vernier_test?port=6000",
                 Some(6000),
             ),
             (
-                "postgresql://someone@db.example.test:5433/dbdelve_test?port=6000",
+                "postgresql://someone@db.example.test:5433/vernier_test?port=6000",
                 Some(6000),
             ),
         ] {
@@ -2303,7 +2303,7 @@ mod tests {
 
     #[test]
     fn the_driver_is_only_ever_handed_a_mode_it_knows() {
-        // dbdelve's five rungs collapse to the driver's three on the wire; the
+        // vernier's five rungs collapse to the driver's three on the wire; the
         // rest is the verifier's job. A word the driver does not know fails
         // its parse and takes the whole connection with it.
         for (mode, expected) in [
@@ -2756,10 +2756,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and Postgres configured through dbdelve_SSH_CONFIG and PG*"]
+    #[ignore = "requires the dev bastions and Postgres configured through vernier_SSH_CONFIG and PG*"]
     fn live_ssh_a_query_runs_through_the_bastion() {
         let connection =
-            Connection::open(&live_tunnelled("dbdelve-bastion")).expect("connection should open");
+            Connection::open(&live_tunnelled("vernier-bastion")).expect("connection should open");
         let result = connection
             .query("SELECT 1 AS one", Fetch::default())
             .expect("query should succeed");
@@ -2771,10 +2771,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and Postgres configured through dbdelve_SSH_CONFIG and PG*"]
+    #[ignore = "requires the dev bastions and Postgres configured through vernier_SSH_CONFIG and PG*"]
     fn live_ssh_a_query_runs_through_a_jump_host() {
         let connection =
-            Connection::open(&live_tunnelled("dbdelve-inner")).expect("connection should open");
+            Connection::open(&live_tunnelled("vernier-inner")).expect("connection should open");
         let result = connection
             .query("SELECT 1 AS one", Fetch::default())
             .expect("query should succeed");
@@ -2782,28 +2782,28 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and Postgres configured through dbdelve_SSH_CONFIG and PG*"]
+    #[ignore = "requires the dev bastions and Postgres configured through vernier_SSH_CONFIG and PG*"]
     fn live_ssh_a_server_the_bastion_cannot_reach_fails_with_ssh_s_reason() {
         let Err(error) = Connection::open(&ServerConfig {
-            host: "dbdelve-nowhere.invalid".into(),
-            ..live_tunnelled("dbdelve-bastion")
+            host: "vernier-nowhere.invalid".into(),
+            ..live_tunnelled("vernier-bastion")
         }) else {
             panic!("a server that does not resolve from the bastion connected");
         };
         assert!(
             error
                 .message
-                .contains("\nSSH tunnel through dbdelve-bastion: open failed: "),
+                .contains("\nSSH tunnel through vernier-bastion: open failed: "),
             "{}",
             error.message
         );
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and Postgres configured through dbdelve_SSH_CONFIG and PG*"]
+    #[ignore = "requires the dev bastions and Postgres configured through vernier_SSH_CONFIG and PG*"]
     fn live_ssh_a_cancel_reaches_the_server_through_the_tunnel() {
         let connection =
-            Connection::open(&live_tunnelled("dbdelve-bastion")).expect("connection should open");
+            Connection::open(&live_tunnelled("vernier-bastion")).expect("connection should open");
         let canceller = connection.clone();
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(500));
@@ -2989,7 +2989,7 @@ mod tests {
     #[test]
     #[ignore = "needs a live PostgreSQL server; see live_config"]
     fn live_a_read_of_a_table_the_users_transaction_locked_is_drained_not_hung() {
-        let table = format!("dbdelve_locked_{}", std::process::id());
+        let table = format!("vernier_locked_{}", std::process::id());
         let connection = Connection::open(&live_config()).expect("connection should open");
         connection
             .query(
@@ -3183,8 +3183,8 @@ mod tests {
             .databases()
             .expect("databases should list");
 
-        assert!(databases.names.contains(&"dbdelve_dev".to_string()));
-        assert_eq!(databases.current.as_deref(), Some("dbdelve_dev"));
+        assert!(databases.names.contains(&"vernier_dev".to_string()));
+        assert_eq!(databases.current.as_deref(), Some("vernier_dev"));
     }
 
     #[test]
@@ -3317,7 +3317,7 @@ mod tests {
     #[ignore = "requires the repository development database configured through PG*"]
     fn live_a_join_or_an_aggregate_is_not_editable() {
         // Two tables, or no table: either way the row on screen is not a row
-        // of anything dbdelve could write back to.
+        // of anything vernier could write back to.
         let connection = Connection::open(&live_config()).expect("connection should open");
 
         for sql in [
@@ -3356,13 +3356,13 @@ mod tests {
         let connection = Connection::open(&live_config()).expect("connection should open");
         connection
             .query(
-                "CREATE TEMP TABLE dbdelve_unkeyed (value integer, label text)",
+                "CREATE TEMP TABLE vernier_unkeyed (value integer, label text)",
                 Fetch::default(),
             )
             .expect("the temporary table should be created");
 
         let result = connection
-            .query("SELECT value, label FROM dbdelve_unkeyed", Fetch::default())
+            .query("SELECT value, label FROM vernier_unkeyed", Fetch::default())
             .expect("query should succeed");
 
         assert!(result.edit.is_none());
@@ -3396,17 +3396,17 @@ mod tests {
         let connection = Connection::open(&live_config()).expect("connection should open");
         connection
             .query(
-                "DROP TABLE IF EXISTS dbdelve_test_ddl; \
-                 CREATE TABLE dbdelve_test_ddl (id bigint, note text DEFAULT 'x') \
+                "DROP TABLE IF EXISTS vernier_test_ddl; \
+                 CREATE TABLE vernier_test_ddl (id bigint, note text DEFAULT 'x') \
                      PARTITION BY RANGE (id); \
-                 CREATE INDEX dbdelve_test_ddl_note ON dbdelve_test_ddl (note)",
+                 CREATE INDEX vernier_test_ddl_note ON vernier_test_ddl (note)",
                 Fetch::default(),
             )
             .expect("the fixture table should be created");
         let partitioned =
-            connection.ddl("public", "dbdelve_test_ddl", RelationKind::PartitionedTable);
+            connection.ddl("public", "vernier_test_ddl", RelationKind::PartitionedTable);
         connection
-            .query("DROP TABLE dbdelve_test_ddl", Fetch::default())
+            .query("DROP TABLE vernier_test_ddl", Fetch::default())
             .expect("the fixture table should be cleaned up");
         let table = connection
             .ddl("public", "accounts", RelationKind::Table)
@@ -3426,9 +3426,9 @@ mod tests {
         assert!(!table.contains("CREATE UNIQUE INDEX"), "{table}");
         assert_eq!(
             partitioned.expect("the partitioned table's DDL should load"),
-            "CREATE TABLE \"public\".\"dbdelve_test_ddl\" (\n    \"id\" bigint,\n    \
+            "CREATE TABLE \"public\".\"vernier_test_ddl\" (\n    \"id\" bigint,\n    \
              \"note\" text DEFAULT 'x'::text\n) PARTITION BY RANGE (id);\n\
-             CREATE INDEX dbdelve_test_ddl_note ON ONLY public.dbdelve_test_ddl \
+             CREATE INDEX vernier_test_ddl_note ON ONLY public.vernier_test_ddl \
              USING btree (note);"
         );
         assert!(
@@ -3438,10 +3438,10 @@ mod tests {
         assert!(view.ends_with(';') && !view.ends_with(";;"), "{view}");
         assert_eq!(
             connection
-                .ddl("public", "dbdelve_test_ddl_missing", RelationKind::Table)
+                .ddl("public", "vernier_test_ddl_missing", RelationKind::Table)
                 .unwrap_err()
                 .message,
-            "public has no relation dbdelve_test_ddl_missing."
+            "public has no relation vernier_test_ddl_missing."
         );
     }
 
@@ -3450,10 +3450,10 @@ mod tests {
     fn live_the_ddl_of_a_generated_column_a_checked_view_and_a_materialized_view_runs_again() {
         let connection = Connection::open(&live_config()).expect("connection should open");
         let objects = [
-            ("dbdelve_test_ddl_generated", RelationKind::Table),
-            ("dbdelve_test_ddl_checked", RelationKind::View),
+            ("vernier_test_ddl_generated", RelationKind::Table),
+            ("vernier_test_ddl_checked", RelationKind::View),
             (
-                "dbdelve_test_ddl_materialized",
+                "vernier_test_ddl_materialized",
                 RelationKind::MaterializedView,
             ),
         ];
@@ -3463,20 +3463,20 @@ mod tests {
                 .map(|(name, kind)| connection.ddl("public", name, *kind))
                 .collect::<Result<Vec<_>, _>>()
         };
-        let drop = "DROP TABLE IF EXISTS dbdelve_test_ddl_generated CASCADE";
+        let drop = "DROP TABLE IF EXISTS vernier_test_ddl_generated CASCADE";
         connection
             .query(
                 &format!(
                     "{drop}; \
-                 CREATE TABLE dbdelve_test_ddl_generated (a int, \
+                 CREATE TABLE vernier_test_ddl_generated (a int, \
                      twice int GENERATED ALWAYS AS (a * 2) STORED, \
-                     CONSTRAINT dbdelve_test_ddl_generated_a CHECK (a > 0)); \
-                 CREATE INDEX dbdelve_test_ddl_generated_a ON dbdelve_test_ddl_generated (a); \
-                 CREATE VIEW dbdelve_test_ddl_checked WITH (security_barrier) AS \
-                     SELECT a FROM dbdelve_test_ddl_generated WHERE a > 1 WITH LOCAL CHECK OPTION; \
-                 CREATE MATERIALIZED VIEW dbdelve_test_ddl_materialized AS \
-                     SELECT a FROM dbdelve_test_ddl_generated; \
-                 CREATE INDEX dbdelve_test_ddl_materialized_a ON dbdelve_test_ddl_materialized (a)"
+                     CONSTRAINT vernier_test_ddl_generated_a CHECK (a > 0)); \
+                 CREATE INDEX vernier_test_ddl_generated_a ON vernier_test_ddl_generated (a); \
+                 CREATE VIEW vernier_test_ddl_checked WITH (security_barrier) AS \
+                     SELECT a FROM vernier_test_ddl_generated WHERE a > 1 WITH LOCAL CHECK OPTION; \
+                 CREATE MATERIALIZED VIEW vernier_test_ddl_materialized AS \
+                     SELECT a FROM vernier_test_ddl_generated; \
+                 CREATE INDEX vernier_test_ddl_materialized_a ON vernier_test_ddl_materialized (a)"
                 ),
                 Fetch::default(),
             )
@@ -3502,22 +3502,22 @@ mod tests {
         );
         assert!(
             table.ends_with(
-                "CREATE INDEX dbdelve_test_ddl_generated_a ON public.dbdelve_test_ddl_generated \
+                "CREATE INDEX vernier_test_ddl_generated_a ON public.vernier_test_ddl_generated \
                  USING btree (a);"
             ),
             "{table}"
         );
         assert!(
             view.starts_with(
-                "CREATE VIEW \"public\".\"dbdelve_test_ddl_checked\" \
+                "CREATE VIEW \"public\".\"vernier_test_ddl_checked\" \
                  WITH (security_barrier=true, check_option=local) AS\n"
             ),
             "{view}"
         );
         assert!(
             materialized.ends_with(
-                ";\nCREATE INDEX dbdelve_test_ddl_materialized_a ON \
-                 public.dbdelve_test_ddl_materialized USING btree (a);"
+                ";\nCREATE INDEX vernier_test_ddl_materialized_a ON \
+                 public.vernier_test_ddl_materialized USING btree (a);"
             ),
             "{materialized}"
         );
@@ -3529,30 +3529,30 @@ mod tests {
         let connection = Connection::open(&live_config()).expect("connection should open");
         connection
             .query(
-                "DROP TABLE IF EXISTS dbdelve_test_referencing; \
-                 CREATE TABLE dbdelve_test_referencing \
+                "DROP TABLE IF EXISTS vernier_test_referencing; \
+                 CREATE TABLE vernier_test_referencing \
                      (account_id bigint REFERENCES accounts (id)) \
                      PARTITION BY RANGE (account_id); \
-                 CREATE TABLE dbdelve_test_referencing_p1 \
-                     PARTITION OF dbdelve_test_referencing FOR VALUES FROM (0) TO (500); \
-                 CREATE TABLE dbdelve_test_referencing_p2 \
-                     PARTITION OF dbdelve_test_referencing FOR VALUES FROM (500) TO (1000)",
+                 CREATE TABLE vernier_test_referencing_p1 \
+                     PARTITION OF vernier_test_referencing FOR VALUES FROM (0) TO (500); \
+                 CREATE TABLE vernier_test_referencing_p2 \
+                     PARTITION OF vernier_test_referencing FOR VALUES FROM (500) TO (1000)",
                 Fetch::default(),
             )
             .expect("the fixture tables should be created");
 
         let references = connection.references("public", "accounts");
         connection
-            .query("DROP TABLE dbdelve_test_referencing", Fetch::default())
+            .query("DROP TABLE vernier_test_referencing", Fetch::default())
             .expect("the fixture tables should be cleaned up");
         let tables: Vec<String> = references
             .expect("references should load")
             .into_iter()
             .map(|reference| reference.table)
-            .filter(|table| table.starts_with("dbdelve_test_referencing"))
+            .filter(|table| table.starts_with("vernier_test_referencing"))
             .collect();
 
-        assert_eq!(tables, ["dbdelve_test_referencing"]);
+        assert_eq!(tables, ["vernier_test_referencing"]);
     }
 
     #[test]
@@ -3561,7 +3561,7 @@ mod tests {
         let connection = Connection::open(&live_config()).expect("connection should open");
         connection
             .query(
-                "CREATE TEMP TABLE dbdelve_composite (
+                "CREATE TEMP TABLE vernier_composite (
                     left_id integer,
                     right_id integer,
                     label text,
@@ -3573,14 +3573,14 @@ mod tests {
 
         let edit = connection
             .query(
-                "SELECT label, right_id, left_id FROM dbdelve_composite",
+                "SELECT label, right_id, left_id FROM vernier_composite",
                 Fetch::default(),
             )
             .expect("query should succeed")
             .edit
             .expect("both key columns are in the result set");
 
-        assert_eq!(edit.table, "dbdelve_composite");
+        assert_eq!(edit.table, "vernier_composite");
         assert!(
             edit.schema.starts_with("pg_temp"),
             "a temporary table lives in a per-session schema: {}",
@@ -3679,17 +3679,17 @@ mod tests {
 
         connection
             .query(
-                "DROP TABLE IF EXISTS dbdelve_test_indexes; \
-                 CREATE TABLE dbdelve_test_indexes (id bigint, email text, note text); \
-                 CREATE INDEX dbdelve_test_indexes_partial \
-                     ON dbdelve_test_indexes (lower(email), id DESC) INCLUDE (note) \
+                "DROP TABLE IF EXISTS vernier_test_indexes; \
+                 CREATE TABLE vernier_test_indexes (id bigint, email text, note text); \
+                 CREATE INDEX vernier_test_indexes_partial \
+                     ON vernier_test_indexes (lower(email), id DESC) INCLUDE (note) \
                      WHERE coalesce(note, 'a, b') <> ''",
                 Fetch::default(),
             )
             .expect("the fixture table should be created");
-        let fixture = connection.structure("public", "dbdelve_test_indexes");
+        let fixture = connection.structure("public", "vernier_test_indexes");
         connection
-            .query("DROP TABLE dbdelve_test_indexes", Fetch::default())
+            .query("DROP TABLE vernier_test_indexes", Fetch::default())
             .expect("the fixture table should be cleaned up");
         let index = &fixture.expect("structure should load").indexes[0];
         assert_eq!(index.kind, IndexKind::Plain);
@@ -3751,19 +3751,19 @@ mod tests {
 
         connection
             .query(
-                "DROP TABLE IF EXISTS dbdelve_test_partitioned; \
-                 CREATE TABLE dbdelve_test_partitioned (id integer NOT NULL) \
+                "DROP TABLE IF EXISTS vernier_test_partitioned; \
+                 CREATE TABLE vernier_test_partitioned (id integer NOT NULL) \
                      PARTITION BY RANGE (id); \
-                 CREATE TABLE dbdelve_test_partitioned_p1 \
-                     PARTITION OF dbdelve_test_partitioned FOR VALUES FROM (0) TO (500); \
-                 CREATE TABLE dbdelve_test_partitioned_p2 \
-                     PARTITION OF dbdelve_test_partitioned FOR VALUES FROM (500) TO (1000); \
-                 INSERT INTO dbdelve_test_partitioned_p1 (id) SELECT generate_series(1, 10); \
-                 INSERT INTO dbdelve_test_partitioned_p2 (id) SELECT generate_series(500, 505); \
-                 ANALYZE dbdelve_test_partitioned; \
-                 DROP TABLE IF EXISTS dbdelve_test_unanalyzed; \
-                 CREATE TABLE dbdelve_test_unanalyzed (id integer NOT NULL); \
-                 INSERT INTO dbdelve_test_unanalyzed (id) SELECT generate_series(1, 10)",
+                 CREATE TABLE vernier_test_partitioned_p1 \
+                     PARTITION OF vernier_test_partitioned FOR VALUES FROM (0) TO (500); \
+                 CREATE TABLE vernier_test_partitioned_p2 \
+                     PARTITION OF vernier_test_partitioned FOR VALUES FROM (500) TO (1000); \
+                 INSERT INTO vernier_test_partitioned_p1 (id) SELECT generate_series(1, 10); \
+                 INSERT INTO vernier_test_partitioned_p2 (id) SELECT generate_series(500, 505); \
+                 ANALYZE vernier_test_partitioned; \
+                 DROP TABLE IF EXISTS vernier_test_unanalyzed; \
+                 CREATE TABLE vernier_test_unanalyzed (id integer NOT NULL); \
+                 INSERT INTO vernier_test_unanalyzed (id) SELECT generate_series(1, 10)",
                 Fetch::default(),
             )
             .expect("the fixture tables should be created");
@@ -3773,36 +3773,36 @@ mod tests {
         assert!(!sizes["public"].contains_key("account_overview"));
 
         assert!(
-            sizes["public"].contains_key("dbdelve_test_partitioned"),
+            sizes["public"].contains_key("vernier_test_partitioned"),
             "a partitioned table's size must be reported"
         );
         let of = |name: &str| sizes["public"][name];
-        let partition_total = of("dbdelve_test_partitioned_p1").size.unwrap()
-            + of("dbdelve_test_partitioned_p2").size.unwrap();
+        let partition_total = of("vernier_test_partitioned_p1").size.unwrap()
+            + of("vernier_test_partitioned_p2").size.unwrap();
         assert_eq!(
-            of("dbdelve_test_partitioned").size,
+            of("vernier_test_partitioned").size,
             Some(partition_total),
             "a partitioned table's size is the sum of its partitions"
         );
         assert_eq!(
-            of("dbdelve_test_partitioned").rows,
+            of("vernier_test_partitioned").rows,
             Some(16),
             "an analyzed partitioned table's estimate is the sum of its partitions'"
         );
 
         assert!(
-            of("dbdelve_test_unanalyzed").size.unwrap_or(0) > 0,
+            of("vernier_test_unanalyzed").size.unwrap_or(0) > 0,
             "a never-analyzed table with rows must not report 0 bytes"
         );
         assert_eq!(
-            of("dbdelve_test_unanalyzed").rows,
+            of("vernier_test_unanalyzed").rows,
             None,
             "a never-analyzed table has no estimate, not one of -1"
         );
 
         connection
             .query(
-                "DROP TABLE dbdelve_test_partitioned; DROP TABLE dbdelve_test_unanalyzed",
+                "DROP TABLE vernier_test_partitioned; DROP TABLE vernier_test_unanalyzed",
                 Fetch::default(),
             )
             .expect("the fixture tables should be cleaned up");

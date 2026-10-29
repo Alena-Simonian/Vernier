@@ -1,6 +1,6 @@
 //! Pixel regressions through the production draw loop, using software D3D11.
 //!
-//! dbdelve patch: zui's backdrop-blur WARP tests (zeronsh/zui@361ff20), with
+//! vernier patch: zui's backdrop-blur WARP tests (zeronsh/zui@361ff20), with
 //! zui's `draw_scene` named `render` here and the sprite fixtures trimmed to
 //! gpui-pre 0.3.9's sprite fields.
 use super::*;

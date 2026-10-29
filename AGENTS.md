@@ -1,16 +1,16 @@
 # AGENTS.md
 
-DBDelve is a native database client in Rust on GPUI for macOS, Linux and Windows,
+Vernier is a native database client in Rust on GPUI for macOS, Linux and Windows,
 speaking Postgres, MySQL, MariaDB, SQLite, DuckDB, Snowflake, SQL Server, MongoDB,
 Redis and ClickHouse.
 
 The split everything below leans on is _whose SQL it is_. An editor buffer is
 the user's and is never touched uninvited; a browsing surface (an object tab's
-preview) runs SQL DBDelve generates, regenerated from visible controls and
+preview) runs SQL Vernier generates, regenerated from visible controls and
 inspectable, never spliced into anyone's buffer.
 
 **Read this file before doing anything.** It is the source of truth for how
-DBDelve is built and why. Each area's detail lives in `docs/agents/`; the
+Vernier is built and why. Each area's detail lives in `docs/agents/`; the
 [Reference](#reference) list at the end says which file a task needs.
 
 ## Hard rules
@@ -24,9 +24,9 @@ require it, stop and raise it instead.
    the statements that matter. The row limit bounds a result by keeping only
    that many rows as they arrive, never by changing the statement, and the UI
    says when a result was capped. A `LIMIT` is written only into
-   DBDelve-generated preview queries.
+   Vernier-generated preview queries.
 
-   DBDelve _does_ write SQL when the user asks it to, and only then, always
+   Vernier _does_ write SQL when the user asks it to, and only then, always
    where the user can read it: on a view the server sorts, a header sort
    splices its `ORDER BY` into the buffer (one sorted in memory reorders its
    rows and writes nothing); grid edits are appended to the buffer (`sql::appended_statement`),
@@ -50,7 +50,7 @@ require it, stop and raise it instead.
 2. **Generated SQL passes a whitelist gate, and there is one per path.**
    `sql::is_generated_write_on` is the single gate every statement the grid
    writes passes first; `sql::is_generated_select` guards the filter bar, the
-   one place user text is spliced into DBDelve's statement. Both dispatch on the
+   one place user text is spliced into Vernier's statement. Both dispatch on the
    engine, to SQL's own gate or to MongoDB's (`mql::`) and Redis's
    (`redis_cmd::`). Do not add a path that bypasses them.
 
@@ -58,7 +58,7 @@ require it, stop and raise it instead.
    trusts its caller is a comment; the check lives in the gate rather than the
    generator precisely so the two can disagree.
 
-   A cell is editable only when DBDelve can name its row by primary key; when
+   A cell is editable only when Vernier can name its row by primary key; when
    it cannot, the grid stays read-only and says why, and never guesses at a
    predicate. A table without a primary key can be inserted into and not
    edited, deliberately. An engine without unique keys is the one exception: a
@@ -71,7 +71,7 @@ require it, stop and raise it instead.
 
 3. **No environment-specific behaviour.** No vendor binary names in error
    strings, no assumption that a loopback host means plaintext, no hardcoded
-   ports or hostnames. DBDelve is a generic client.
+   ports or hostnames. Vernier is a generic client.
 
 4. **Driver types do not reach the UI layer.** The grid receives rendered
    strings and type tags, never a `postgres::Row`, a `mysql::Value`, a
@@ -85,7 +85,7 @@ require it, stop and raise it instead.
 
    What crosses out is `db::Engine` (`src/db/mod.rs`) and the data that
    describes it, `EngineSpec` and its strategy types (`src/db/spec.rs`),
-   because DBDelve writes SQL and has to spell it the way the server will read
+   because Vernier writes SQL and has to spell it the way the server will read
    it. Neither holds a connection or a driver type. Views and workspace code _ask_ it, through its
    methods, and never match on it. Where an engine question is missing, add a
    method to `Engine` rather than a `match` at the caller. `sql.rs`,
@@ -159,13 +159,13 @@ in the graph.
 - **The three tree-sitter pins are correctness, not formatting.** The grammar
   decides where every statement boundary falls, what `sql.rs` will splice an
   `ORDER BY` into (and `mql.rs` a `.sort()`), and what the gates accept. A bump
-  changes what DBDelve sends to the server. Treat them like the driver pins.
+  changes what Vernier sends to the server. Treat them like the driver pins.
 - **gpui and gpui-component are vendored** under `vendor/` through
   `[patch.crates-io]`: five crates, for the backdrop blur and for a renderer
   blend-factor fix that keeps glass from going grey. `Cargo.toml` says which
   patch each crate carries and when it can be dropped. Every change there is
-  marked `dbdelve patch` and re-applied by hand on a bump, so anything that can
-  live in DBDelve's own code goes there instead.
+  marked `vernier patch` and re-applied by hand on a bump, so anything that can
+  live in Vernier's own code goes there instead.
 - **Feature flags are load-bearing.** Without `gpui_platform`'s `font-kit` the
   macOS backend renders no text at all, silently; without `x11` or `wayland`
   the Linux backend panics on the first frame. `default-features = false` is
@@ -178,7 +178,7 @@ in the graph.
   no reactor. A tokio future on `cx.background_executor().spawn(...)` _panics_
   the moment it touches a socket or timer. Database work uses blocking calls
   spawned onto the background executor; a driver that is async (Postgres, SQL
-  Server, MongoDB) owns a tokio runtime per connection, and DBDelve blocks on
+  Server, MongoDB) owns a tokio runtime per connection, and Vernier blocks on
   it from a background thread. Nothing that leaves `src/db/` is a future.
 
 ## Build, run and check
@@ -189,19 +189,19 @@ cargo run
 ```
 
 Linux needs the system packages listed in `README.md` first. **Plain `cargo
-run` is the release variant**: with `DBDELVE_VARIANT` unset it reads and
+run` is the release variant**: with `VERNIER_VARIANT` unset it reads and
 writes the installed app's profiles and keychain passwords. Run
-`DBDELVE_VARIANT=dev cargo run` to share the dev bundle's instead. The
+`VERNIER_VARIANT=dev cargo run` to share the dev bundle's instead. The
 development databases accept:
 
 ```text
-postgresql://dbdelve:dbdelve@127.0.0.1:55432/dbdelve_dev
-mysql://dbdelve:dbdelve@127.0.0.1:53306/dbdelve_dev
-mariadb://dbdelve:dbdelve@127.0.0.1:53307/dbdelve_dev
-mssql://dbdelve:DBDelve_dev1@127.0.0.1:51433/dbdelve_dev
-redis://dbdelve:dbdelve@127.0.0.1:56379/0
-mongodb://dbdelve:dbdelve@127.0.0.1:57017/dbdelve_dev
-clickhouse://dbdelve:dbdelve@127.0.0.1:58123/dbdelve_dev?sslmode=disable
+postgresql://vernier:vernier@127.0.0.1:55432/vernier_dev
+mysql://vernier:vernier@127.0.0.1:53306/vernier_dev
+mariadb://vernier:vernier@127.0.0.1:53307/vernier_dev
+mssql://vernier:Vernier_dev1@127.0.0.1:51433/vernier_dev
+redis://vernier:vernier@127.0.0.1:56379/0
+mongodb://vernier:vernier@127.0.0.1:57017/vernier_dev
+clickhouse://vernier:vernier@127.0.0.1:58123/vernier_dev?sslmode=disable
 ```
 
 What a change should pass locally:
@@ -231,7 +231,7 @@ Paths per platform and the rest of storage are in `docs/agents/session.md`.
   Ctrl elsewhere. Never `cmd-`: on Linux that is Super, which the window manager
   takes first.
 - **The dev and release apps share nothing on disk** when the dev one runs
-  as `DBDELVE_VARIANT=dev`, which the bundle sets for itself.
+  as `VERNIER_VARIANT=dev`, which the bundle sets for itself.
   `store::variant_name` moves the support directory and the keychain service
   together, and a variant it rejects is an error, never a fall back to the
   release name.
@@ -244,7 +244,7 @@ Hard-won and easy to rediscover. The ones only animation work reaches are in
 - **A repeating `with_animation` element requests a redraw every display frame
   while mounted.** One spinner has been measured pinning a window at 120Hz and
   36% CPU. The remedy is a single shared throttled clock with per-view leases,
-  reaping stale leases and parking when the list empties. **DBDelve does not have
+  reaping stale leases and parking when the list empties. **Vernier does not have
   one**: anything else that moves needs raising first, and a second repeating
   animation means building that clock and moving both onto it. What moves
   today is listed in `docs/agents/ui.md`.
@@ -262,7 +262,7 @@ Hard-won and easy to rediscover. The ones only animation work reaches are in
   beats the container's, which is why the palette's arrows are bound against
   `Palette > Input`: a descendant predicate matches at the leaf, the only depth
   that takes them back from gpui-component's input. Ties are broken by
-  registration order, and DBDelve's `cx.bind_keys` runs after
+  registration order, and Vernier's `cx.bind_keys` runs after
   `gpui_component::init`.
 
 ## Conventions

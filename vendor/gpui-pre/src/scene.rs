@@ -50,7 +50,7 @@ pub struct Scene {
     pub subpixel_sprites: Vec<SubpixelSprite>,
     pub polychrome_sprites: Vec<PolychromeSprite>,
     pub surfaces: Vec<PaintSurface>,
-    /// dbdelve patch: backdrop-blur regions, kept out of the primitive batch
+    /// vernier patch: backdrop-blur regions, kept out of the primitive batch
     /// stream because the renderer breaks its render pass at each blur's order
     /// to snapshot what is beneath it. Renderers that don't read this field
     /// leave blurs undrawn.
@@ -71,7 +71,7 @@ impl Scene {
         self.subpixel_sprites.clear();
         self.polychrome_sprites.clear();
         self.surfaces.clear();
-        // dbdelve patch: backdrop blur.
+        // vernier patch: backdrop blur.
         self.backdrop_blurs.clear();
     }
 
@@ -91,7 +91,7 @@ impl Scene {
         self.paint_operations.push(PaintOperation::EndLayer);
     }
 
-    // dbdelve patch: lets a backdrop blur tell whether it paints inside a layer.
+    // vernier patch: lets a backdrop blur tell whether it paints inside a layer.
     pub(crate) fn in_layer(&self) -> bool {
         !self.layer_stack.is_empty()
     }
@@ -150,7 +150,7 @@ impl Scene {
             .push(PaintOperation::Primitive(primitive));
     }
 
-    /// dbdelve patch: a blur takes the order of the layer it's painted in, so
+    /// vernier patch: a blur takes the order of the layer it's painted in, so
     /// a [`crate::Window::paint_layer`] around the blur gives it (and its
     /// splitter) one order above the content below; whatever is painted over
     /// it afterwards is ordered above that by the bounds tree.
@@ -175,7 +175,7 @@ impl Scene {
                 PaintOperation::Primitive(primitive) => self.insert_primitive(primitive.clone()),
                 PaintOperation::StartLayer(bounds) => self.push_layer(*bounds),
                 PaintOperation::EndLayer => self.pop_layer(),
-                // dbdelve patch: backdrop blur.
+                // vernier patch: backdrop blur.
                 PaintOperation::BackdropBlur(blur) => self.insert_backdrop_blur(*blur),
             }
         }
@@ -193,7 +193,7 @@ impl Scene {
         self.polychrome_sprites
             .sort_by_key(|sprite| (sprite.order, sprite.tile.tile_id));
         self.surfaces.sort_by_key(|surface| surface.order);
-        // dbdelve patch: backdrop blur.
+        // vernier patch: backdrop blur.
         self.backdrop_blurs.sort_by_key(|blur| blur.order);
     }
 
@@ -222,7 +222,7 @@ impl Scene {
             polychrome_sprites_iter: self.polychrome_sprites.iter().peekable(),
             surfaces_start: 0,
             surfaces_iter: self.surfaces.iter().peekable(),
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             backdrop_blurs_iter: self.backdrop_blurs.iter().peekable(),
         }
     }
@@ -252,7 +252,7 @@ pub(crate) enum PaintOperation {
     Primitive(Primitive),
     StartLayer(Bounds<ScaledPixels>),
     EndLayer,
-    // dbdelve patch: backdrop blur.
+    // vernier patch: backdrop blur.
     BackdropBlur(BackdropBlur),
 }
 
@@ -322,7 +322,7 @@ struct BatchIterator<'a> {
     polychrome_sprites_iter: Peekable<slice::Iter<'a, PolychromeSprite>>,
     surfaces_start: usize,
     surfaces_iter: Peekable<slice::Iter<'a, PaintSurface>>,
-    // dbdelve patch: backdrop blur.
+    // vernier patch: backdrop blur.
     backdrop_blurs_iter: Peekable<slice::Iter<'a, BackdropBlur>>,
 }
 
@@ -362,14 +362,14 @@ impl<'a> Iterator for BatchIterator<'a> {
 
         let first = orders_and_kinds[0];
         let second = orders_and_kinds[1];
-        // dbdelve patch: `mut`, for the backdrop-blur split below.
+        // vernier patch: `mut`, for the backdrop-blur split below.
         let (batch_kind, mut max_order_and_kind) = if first.0.is_some() {
             (first.1, (second.0.unwrap_or(u32::MAX), second.1))
         } else {
             return None;
         };
 
-        // dbdelve patch: blurs run before the primitives at their order, so
+        // vernier patch: blurs run before the primitives at their order, so
         // every batch stops before the next blur. That includes a batch with no
         // other kind left after it: the invisible shadow that
         // `Window::paint_backdrop_blur` paints as a splitter would otherwise
@@ -584,7 +584,7 @@ impl PrimitiveBatch {
         }
     }
 
-    /// dbdelve patch: the first draw order in this batch from the scene that
+    /// vernier patch: the first draw order in this batch from the scene that
     /// produced it. Backdrop blurs at or below this order must be applied
     /// before drawing it.
     pub fn first_order(&self, scene: &Scene) -> DrawOrder {
@@ -663,7 +663,7 @@ impl From<Shadow> for Primitive {
     }
 }
 
-/// dbdelve patch: a backdrop-blur region within the window. The renderer
+/// vernier patch: a backdrop-blur region within the window. The renderer
 /// snapshots everything painted below this order and paints it back
 /// gaussian-blurred inside the rounded bounds (frosted-glass popovers). Every
 /// renderer (Metal, DirectX, wgpu) draws it; see
@@ -1036,7 +1036,7 @@ impl PathVertex<Pixels> {
     }
 }
 
-// dbdelve patch: backdrop-blur batching tests.
+// vernier patch: backdrop-blur batching tests.
 #[cfg(test)]
 mod tests {
     use super::*;

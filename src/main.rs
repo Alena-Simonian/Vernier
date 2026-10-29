@@ -101,7 +101,7 @@ use ui::{
 };
 use workspace::Workspace;
 
-/// The platform's window buttons, which dbdelve positions but does not draw.
+/// The platform's window buttons, which vernier positions but does not draw.
 const TRAFFIC_LIGHT_DIAMETER: f32 = 14.0;
 
 fn connection_config_from_environment() -> Result<Option<ConnectionConfig>, String> {
@@ -152,7 +152,7 @@ fn connection_config_from_environment() -> Result<Option<ConnectionConfig>, Stri
         .transpose()?;
 
     // The `PG*` variables configure a Postgres profile and are not generalised.
-    // dbdelve is a generic client, not a generic environment reader, and there is
+    // vernier is a generic client, not a generic environment reader, and there is
     // no convention for the other engines to read.
     Ok(Some(ConnectionConfig::Postgres(ServerConfig {
         host,
@@ -162,7 +162,7 @@ fn connection_config_from_environment() -> Result<Option<ConnectionConfig>, Stri
         password: std::env::var("PGPASSWORD").unwrap_or_default(),
         sslmode,
         root_certificate,
-        // No `PG*` variable means it, and dbdelve is not inventing one.
+        // No `PG*` variable means it, and vernier is not inventing one.
         statement_timeout: 0,
         ssh: None,
         schema: None,
@@ -215,7 +215,7 @@ fn panic_log_directory() -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     {
         let home = std::env::var_os("HOME").filter(|home| !home.is_empty())?;
-        Some(PathBuf::from(home).join("Library/Logs/dbdelve"))
+        Some(PathBuf::from(home).join("Library/Logs/vernier"))
     }
     #[cfg(target_os = "windows")]
     {
@@ -227,15 +227,15 @@ fn panic_log_directory() -> Option<PathBuf> {
                     .filter(|value| !value.is_empty())
                     .map(|profile| PathBuf::from(profile).join("AppData").join("Local"))
             })?;
-        Some(root.join("dbdelve"))
+        Some(root.join("vernier"))
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let home = std::env::var_os("HOME").filter(|home| !home.is_empty())?;
         Some(
             match std::env::var_os("XDG_STATE_HOME").filter(|value| !value.is_empty()) {
-                Some(state_home) => PathBuf::from(state_home).join("dbdelve"),
-                None => PathBuf::from(home).join(".local/state/dbdelve"),
+                Some(state_home) => PathBuf::from(state_home).join("vernier"),
+                None => PathBuf::from(home).join(".local/state/vernier"),
             },
         )
     }
@@ -283,16 +283,16 @@ fn main() {
             // back out of the keymap.
             //
             // The rest of the bar is there for the same reason in reverse: every
-            // item names an action dbdelve already dispatches, so the menu is a way
+            // item names an action vernier already dispatches, so the menu is a way
             // to discover the keystroke rather than a second path to the work. No
-            // Edit menu -- dbdelve does not own cut, copy and paste, the focused
+            // Edit menu -- vernier does not own cut, copy and paste, the focused
             // field does, and a menu claiming them would take them from it.
             cx.on_action(|_: &Quit, cx: &mut App| cx.quit());
             cx.set_menus(app_menus(false));
 
             // The platform titlebar is kept only for its window buttons on macOS:
-            // a system bar in its own grey above dbdelve's chrome is the seam
-            // every native app avoids. dbdelve paints that strip itself, and the
+            // a system bar in its own grey above vernier's chrome is the seam
+            // every native app avoids. vernier paints that strip itself, and the
             // buttons sit over it. Windows draws no buttons into it, so
             // `ui::titlebar` draws them there. GPUI's Windows backend has no
             // usable system caption to fall back on either.
@@ -305,7 +305,7 @@ fn main() {
             let options = WindowOptions {
                 window_background: theme.window_background(),
                 titlebar: Some(TitlebarOptions {
-                    title: Some("dbdelve".into()),
+                    title: Some("Vernier".into()),
                     appears_transparent: ui::CLIENT_TITLEBAR,
                     traffic_light_position: cfg!(target_os = "macos").then(|| {
                         point(
@@ -320,10 +320,10 @@ fn main() {
                 // icon however well the .desktop file is installed. It has to
                 // equal the entry's basename.
                 app_id: Some(
-                    std::env::var("DBDELVE_APP_ID")
+                    std::env::var("VERNIER_APP_ID")
                         .ok()
                         .filter(|id| !id.is_empty())
-                        .unwrap_or_else(|| "dbdelve".into()),
+                        .unwrap_or_else(|| "vernier".into()),
                 ),
                 ..Default::default()
             };
@@ -336,10 +336,10 @@ fn main() {
             })
             .expect("failed to open window");
 
-            // dbdelve has one window and no way to open a second: with it closed the
+            // vernier has one window and no way to open a second: with it closed the
             // Dock icon is inert and the menu offers only Quit, which is an
             // application nobody can get back into. Quitting is the way back --
-            // clicking the dead icon then launches dbdelve again, restoring the
+            // clicking the dead icon then launches vernier again, restoring the
             // profiles and the buffers `Workspace::on_release` has just written.
             // Reopening a window here would have to rebuild that same state anyway,
             // and would keep a process alive that is holding nothing.
@@ -359,12 +359,12 @@ fn main() {
 pub(crate) fn app_menus(imports_rows: bool) -> Vec<Menu> {
     vec![
         Menu {
-            name: "dbdelve".into(),
+            name: "Vernier".into(),
             disabled: false,
             items: vec![
                 MenuItem::action("Settings…", OpenSettings),
                 MenuItem::separator(),
-                MenuItem::action("Quit dbdelve", Quit),
+                MenuItem::action("Quit Vernier", Quit),
             ],
         },
         Menu {

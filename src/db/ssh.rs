@@ -50,7 +50,7 @@ pub struct Tunnel {
     /// Behind a mutex so a dial can ask whether ssh is still running.
     process: Mutex<Child>,
     /// Created with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, so the OS ends ssh
-    /// when this handle closes, however DBDelve exits.
+    /// when this handle closes, however Vernier exits.
     #[cfg(windows)]
     _job: std::os::windows::io::OwnedHandle,
 }
@@ -86,7 +86,7 @@ impl Tunnel {
             let mut args = ssh_args(ssh, port, target_host, target_port)?;
             // Tests never read the real ~/.ssh.
             if cfg!(test)
-                && let Ok(config) = std::env::var("dbdelve_SSH_CONFIG")
+                && let Ok(config) = std::env::var("vernier_SSH_CONFIG")
             {
                 args.splice(0..0, ["-F".to_owned(), config]);
             }
@@ -302,14 +302,14 @@ fn ssh_args(
         // ssh expands `%` tokens in an identity file, even one given here.
         args.extend(["-i".to_owned(), identity.replace('%', "%%")]);
     }
-    match std::env::var("DBDELVE_SSH_KNOWN_HOSTS") {
+    match std::env::var("VERNIER_SSH_KNOWN_HOSTS") {
         Ok(files) if !files.trim().is_empty() => {
             args.extend(["-o".to_owned(), format!("UserKnownHostsFile={files}")]);
         }
         Ok(_) | Err(std::env::VarError::NotPresent) => {}
         Err(error) => {
             return Err(plain_error(format!(
-                "Invalid DBDELVE_SSH_KNOWN_HOSTS: {error}"
+                "Invalid VERNIER_SSH_KNOWN_HOSTS: {error}"
             )));
         }
     }
@@ -457,7 +457,7 @@ fn chatter(line: &str) -> bool {
 }
 
 /// ssh runs under a shell holding the read end of a pipe on its stdin, whose
-/// write end only DBDelve holds. When DBDelve exits, however it exits, the
+/// write end only Vernier holds. When Vernier exits, however it exits, the
 /// pipe closes, `read` returns, and the shell kills ssh. The argv arrives as
 /// `"$@"`, never spliced into the script. `exec 3<&0` because POSIX hands an
 /// asynchronous list /dev/null as its stdin; the shell exits with ssh's status.
@@ -497,7 +497,7 @@ fn watched(program: &str, args: &[String]) -> io::Result<Child> {
         .stderr(Stdio::piped());
     // std hands the child the spawning thread's signal mask, and the GCD
     // worker a background connect runs on blocks every signal: ssh would
-    // ignore the watchdog's kill and outlive DBDelve. SIGTERM's disposition
+    // ignore the watchdog's kill and outlive Vernier. SIGTERM's disposition
     // too, since an ignored one survives exec just the same.
     // SAFETY: sigemptyset, pthread_sigmask and signal are async-signal-safe,
     // which is all a hook between fork and exec may call.
@@ -562,7 +562,7 @@ fn spawn(local: SocketAddr, host: &str, args: &[String]) -> io::Result<Tunnel> {
     }
 }
 
-// ponytail: ssh runs for a moment before it joins the job, so a DBDelve killed
+// ponytail: ssh runs for a moment before it joins the job, so a Vernier killed
 // in that window leaves it behind. Upgrade: spawn suspended, assign, resume.
 #[cfg(windows)]
 fn kill_on_close_job(process: &Child) -> io::Result<std::os::windows::io::OwnedHandle> {
@@ -602,7 +602,7 @@ fn kill_on_close_job(process: &Child) -> io::Result<std::os::windows::io::OwnedH
 /// The dev bastion an engine's `live_ssh_` tests tunnel through.
 #[cfg(test)]
 pub(super) fn live_bastion(alias: &str) -> Option<SshTunnel> {
-    std::env::var("dbdelve_SSH_CONFIG").expect("dbdelve_SSH_CONFIG is required");
+    std::env::var("vernier_SSH_CONFIG").expect("vernier_SSH_CONFIG is required");
     Some(SshTunnel {
         host: alias.to_owned(),
         ..SshTunnel::default()
@@ -872,20 +872,20 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_missing_ssh_is_named_as_missing() {
-        let mut child = watched("dbdelve-no-such-ssh", &[]).unwrap();
+        let mut child = watched("vernier-no-such-ssh", &[]).unwrap();
         // Held, because `wait` would close it and the watchdog would race the
         // shell's own exit with a kill.
         let _stdin = child.stdin.take();
         let status = child.wait().unwrap();
         assert_eq!(status.code(), Some(127));
         assert_eq!(
-            failure("bastion", status, "sh: dbdelve-no-such-ssh: not found").message,
+            failure("bastion", status, "sh: vernier-no-such-ssh: not found").message,
             "No ssh executable was found."
         );
     }
 
     fn live_tunnel(ssh: &SshTunnel) -> Result<Tunnel, DbError> {
-        std::env::var("dbdelve_SSH_CONFIG").expect("dbdelve_SSH_CONFIG is required");
+        std::env::var("vernier_SSH_CONFIG").expect("vernier_SSH_CONFIG is required");
         Tunnel::open(ssh, "postgres", 5432)
     }
 
@@ -914,21 +914,21 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions configured through dbdelve_SSH_CONFIG"]
+    #[ignore = "requires the dev bastions configured through vernier_SSH_CONFIG"]
     fn live_ssh_a_tunnel_reaches_postgres_through_the_bastion() {
-        let tunnel = live_tunnel(&tunnel("dbdelve-bastion")).unwrap();
+        let tunnel = live_tunnel(&tunnel("vernier-bastion")).unwrap();
         postgres_answers(tunnel.dial().unwrap());
     }
 
     #[test]
-    #[ignore = "requires the dev bastions configured through dbdelve_SSH_CONFIG"]
+    #[ignore = "requires the dev bastions configured through vernier_SSH_CONFIG"]
     fn live_ssh_a_tunnel_reaches_postgres_through_a_jump_host() {
-        let tunnel = live_tunnel(&tunnel("dbdelve-inner")).unwrap();
+        let tunnel = live_tunnel(&tunnel("vernier-inner")).unwrap();
         postgres_answers(tunnel.dial().unwrap());
     }
 
     #[test]
-    #[ignore = "requires the dev bastions configured through dbdelve_SSH_CONFIG"]
+    #[ignore = "requires the dev bastions configured through vernier_SSH_CONFIG"]
     fn live_ssh_a_host_ssh_cannot_reach_fails_fast_with_ssh_s_message() {
         let unreachable = SshTunnel {
             port: Some(1),
@@ -936,11 +936,11 @@ mod tests {
         };
         let stranger = SshTunnel {
             user: "nobody".to_owned(),
-            ..tunnel("dbdelve-bastion")
+            ..tunnel("vernier-bastion")
         };
         for (ssh, said) in [
             (
-                tunnel("dbdelve-nowhere.invalid"),
+                tunnel("vernier-nowhere.invalid"),
                 "Could not resolve hostname",
             ),
             (unreachable, "Connection refused"),
@@ -963,9 +963,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions configured through dbdelve_SSH_CONFIG"]
+    #[ignore = "requires the dev bastions configured through vernier_SSH_CONFIG"]
     fn live_ssh_dropping_the_tunnel_ends_ssh_and_closes_the_port() {
-        let tunnel = live_tunnel(&tunnel("dbdelve-bastion")).unwrap();
+        let tunnel = live_tunnel(&tunnel("vernier-bastion")).unwrap();
         let local = tunnel.dial().unwrap();
         assert!(ssh_is_running_for(local));
 
@@ -977,10 +977,10 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    #[ignore = "requires the dev bastions configured through dbdelve_SSH_CONFIG"]
+    #[ignore = "requires the dev bastions configured through vernier_SSH_CONFIG"]
     fn live_ssh_a_tunnel_opened_with_every_signal_blocked_still_ends_on_drop() {
         let tunnel =
-            on_a_thread_blocking_every_signal(|| live_tunnel(&tunnel("dbdelve-bastion")).unwrap());
+            on_a_thread_blocking_every_signal(|| live_tunnel(&tunnel("vernier-bastion")).unwrap());
         let local = tunnel.dial().unwrap();
 
         let (dropped, done) = std::sync::mpsc::channel();
@@ -996,9 +996,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions configured through dbdelve_SSH_CONFIG"]
+    #[ignore = "requires the dev bastions configured through vernier_SSH_CONFIG"]
     fn live_ssh_a_tunnel_whose_ssh_has_gone_refuses_to_be_dialled() {
-        let tunnel = live_tunnel(&tunnel("dbdelve-bastion")).unwrap();
+        let tunnel = live_tunnel(&tunnel("vernier-bastion")).unwrap();
         let port = tunnel.dial().unwrap().port();
         assert!(
             Command::new("pkill")
@@ -1019,7 +1019,7 @@ mod tests {
         assert!(
             error
                 .message
-                .starts_with("SSH tunnel through dbdelve-bastion closed"),
+                .starts_with("SSH tunnel through vernier-bastion closed"),
             "{}",
             error.message
         );
@@ -1028,7 +1028,7 @@ mod tests {
     #[test]
     #[ignore = "requires an ssh executable"]
     fn live_ssh_accept_new_is_added_only_when_ssh_reports_ask() {
-        let config = std::env::temp_dir().join(format!("dbdelve-ssh-{}.conf", std::process::id()));
+        let config = std::env::temp_dir().join(format!("vernier-ssh-{}.conf", std::process::id()));
         std::fs::write(
             &config,
             "Host strict\n    StrictHostKeyChecking yes\n\

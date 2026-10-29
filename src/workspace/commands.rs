@@ -567,7 +567,7 @@ impl Workspace {
         self.refilter_settings(cx);
         self.remember_profiles(cx);
         self.note(
-            format!("Bound to {chord}. Restart dbdelve for it to take effect."),
+            format!("Bound to {chord}. Restart Vernier for it to take effect."),
             cx,
         );
         cx.notify();
@@ -581,7 +581,7 @@ impl Workspace {
         self.refilter_settings(cx);
         self.remember_profiles(cx);
         self.note(
-            "Reset to default. Restart dbdelve for it to take effect.".into(),
+            "Reset to default. Restart Vernier for it to take effect.".into(),
             cx,
         );
         cx.notify();

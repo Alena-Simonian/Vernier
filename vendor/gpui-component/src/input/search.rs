@@ -343,7 +343,7 @@ impl<M: crate::input::overlay::OverlayMode> Render for SearchPanel<M> {
             .w_full()
             .gap_1()
             .bg(cx.theme().tokens.popover)
-            // dbdelve patch: the popover tint is only a tint on frost.
+            // vernier patch: the popover tint is only a tint on frost.
             .when(popover_frosted(cx), |this| this.backdrop_blur(POPOVER_BLUR))
             .border_b_1()
             .rounded(cx.theme().radius.half())

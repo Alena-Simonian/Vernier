@@ -57,7 +57,7 @@ pub(crate) const SET: &str = "set";
 pub(crate) const ZSET: &str = "zset";
 
 /// What every deleted list item is set to before the `LREM` that takes it out.
-const SENTINEL: &str = "dbdelve:deleted:";
+const SENTINEL: &str = "vernier:deleted:";
 
 /// The tag `name` is, for a snapshot read back from disk.
 pub(crate) fn cell_type(name: &str) -> Option<&'static str> {
@@ -815,7 +815,7 @@ fn key_word(table: &str) -> Result<String, String> {
 fn keyspace(table: &str) -> Result<(), String> {
     match table == KEYS {
         true => Ok(()),
-        false => Err(format!("{table} is not a grid DBDelve writes to.")),
+        false => Err(format!("{table} is not a grid Vernier writes to.")),
     }
 }
 
@@ -834,7 +834,7 @@ fn fetched(
         Some(BYTES) if matches!(split(text).as_deref(), Ok([_])) => Ok(text.to_string()),
         Some(STRING | INTEGER | DOUBLE) => Ok(quoted(text)),
         _ => Err(format!(
-            "DBDelve cannot tell which bytes this row's {column} is, so it will not name it."
+            "Vernier cannot tell which bytes this row's {column} is, so it will not name it."
         )),
     }
 }

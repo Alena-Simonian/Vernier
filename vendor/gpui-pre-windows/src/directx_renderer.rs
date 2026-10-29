@@ -29,7 +29,7 @@ const RENDER_TARGET_FORMAT: DXGI_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 const PATH_MULTISAMPLE_COUNT: u32 = 4;
 const MAX_INSTANCE_BUFFER_SIZE: usize = 256 * 1024 * 1024;
 
-// dbdelve patch: backdrop blur, ported from zui's DirectX renderer.
+// vernier patch: backdrop blur, ported from zui's DirectX renderer.
 mod backdrop;
 use backdrop::BackdropResources;
 
@@ -75,7 +75,7 @@ pub(crate) struct DirectXRendererDevices {
 }
 
 struct DirectXResources {
-    // dbdelve patch: created only when a visible backdrop blur is drawn;
+    // vernier patch: created only when a visible backdrop blur is drawn;
     // dropped on resize, on device loss and after 120 frames without one.
     backdrop: Option<BackdropResources>,
     // Direct3D rendering objects
@@ -367,7 +367,7 @@ impl DirectXRenderer {
         })?;
         self.upload_scene_buffers(scene)?;
 
-        // dbdelve patch: age the blur's scratch even when the scene's blurs are
+        // vernier patch: age the blur's scratch even when the scene's blurs are
         // all clipped or invalid; drawing a visible one resets the count.
         {
             let resources = self.resources.as_mut().context("resources missing")?;
@@ -387,7 +387,7 @@ impl DirectXRenderer {
             .and_then(|devices| devices.annotation.clone())
             .filter(|annotation| unsafe { annotation.GetStatus().as_bool() });
         for batch in scene.batches() {
-            // dbdelve patch: the scene stops every batch before the next blur's
+            // vernier patch: the scene stops every batch before the next blur's
             // order, so snapshotting here, ahead of the primitives at that
             // order, takes in everything below it, earlier frosted layers too.
             if blurs.peek().is_some() {
@@ -434,7 +434,7 @@ impl DirectXRenderer {
                 )
             })?;
         }
-        // dbdelve patch: blurs above every primitive still frost what's below.
+        // vernier patch: blurs above every primitive still frost what's below.
         for blur in blurs {
             self.draw_backdrop_blur(blur)?;
         }
@@ -446,7 +446,7 @@ impl DirectXRenderer {
     /// goes through MetalRenderer; this is the Windows analogue). Draws into
     /// the existing render target, copies it into a `D3D11_USAGE_STAGING`
     /// texture, maps it, and converts BGRA to RGBA.
-    // dbdelve patch: see `WindowsWindow::render_to_image`.
+    // vernier patch: see `WindowsWindow::render_to_image`.
     #[cfg(feature = "test-support")]
     pub(crate) fn render_to_image(
         &mut self,
@@ -533,7 +533,7 @@ impl DirectXRenderer {
         let devices = self.devices.as_ref().context("devices missing")?;
         unsafe { devices.device_context.OMSetRenderTargets(None, None) };
         let resources = self.resources.as_mut().context("resources missing")?;
-        // dbdelve patch: the blur's scratch is clamped to the old size.
+        // vernier patch: the blur's scratch is clamped to the old size.
         resources.backdrop = None;
         resources.render_target.take();
         resources.render_target_view.take();
@@ -941,7 +941,7 @@ impl DirectXResources {
         set_rasterizer_state(&devices.device, &devices.device_context)?;
 
         Ok(Self {
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             backdrop: None,
             swap_chain,
             render_target: Some(render_target),
@@ -1542,7 +1542,7 @@ fn create_blend_state(device: &ID3D11Device) -> Result<ID3D11BlendState> {
     desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
     desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
     desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    // dbdelve patch: upstream adds the destination alpha (D3D11_BLEND_ONE), so on
+    // vernier patch: upstream adds the destination alpha (D3D11_BLEND_ONE), so on
     // a transparent window every translucent layer over another overstates the
     // coverage it hands the compositor and darkens the desktop showing through.
     // INV_SRC_ALPHA is the `over` operator the colour channels already use.
@@ -1607,7 +1607,7 @@ fn create_blend_state_for_path_sprite(device: &ID3D11Device) -> Result<ID3D11Ble
     desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
     desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
     desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    // dbdelve patch: see `create_blend_state`.
+    // vernier patch: see `create_blend_state`.
     desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
     desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL.0 as u8;
     unsafe {
@@ -1755,7 +1755,7 @@ pub(crate) mod shader_resources {
 
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     pub(crate) enum ShaderModule {
-        // dbdelve patch: backdrop blur.
+        // vernier patch: backdrop blur.
         BackdropPass,
         BackdropComposite,
         Quad,
@@ -1808,7 +1808,7 @@ pub(crate) mod shader_resources {
         #[cfg(not(debug_assertions))]
         fn from_bytes(module: ShaderModule, target: ShaderTarget) -> Self {
             let bytes = match module {
-                // dbdelve patch: backdrop blur.
+                // vernier patch: backdrop blur.
                 ShaderModule::BackdropPass => match target {
                     ShaderTarget::Vertex => BACKDROP_PASS_VERTEX_BYTES,
                     ShaderTarget::Fragment => BACKDROP_PASS_FRAGMENT_BYTES,
@@ -1931,7 +1931,7 @@ pub(crate) mod shader_resources {
     impl ShaderModule {
         pub fn as_str(self) -> &'static str {
             match self {
-                // dbdelve patch: backdrop blur.
+                // vernier patch: backdrop blur.
                 ShaderModule::BackdropPass => "backdrop_pass",
                 ShaderModule::BackdropComposite => "backdrop_composite",
                 ShaderModule::Quad => "quad",

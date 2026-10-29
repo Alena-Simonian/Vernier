@@ -1,22 +1,22 @@
 # Pinned so a worktree checkout joins the same stack as the main one instead of
 # starting a second, folder-named one that fights it for the ports.
-name: dbdelve
+name: vernier
 
 services:
   postgres:
     image: postgis/postgis:15-3.5
     platform: linux/amd64
     environment:
-      POSTGRES_DB: dbdelve_dev
-      POSTGRES_USER: dbdelve
-      POSTGRES_PASSWORD: dbdelve
+      POSTGRES_DB: vernier_dev
+      POSTGRES_USER: vernier
+      POSTGRES_PASSWORD: vernier
     ports:
-      - "${DBDELVE_POSTGRES_PORT:-55432}:5432"
+      - "${VERNIER_POSTGRES_PORT:-55432}:5432"
     volumes:
-      - dbdelve-postgres-data:/var/lib/postgresql/data
+      - vernier-postgres-data:/var/lib/postgresql/data
       - ./dev/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dbdelve -d dbdelve_dev"]
+      test: ["CMD-SHELL", "pg_isready -U vernier -d vernier_dev"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -24,17 +24,17 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_DATABASE: dbdelve_dev
-      MYSQL_USER: dbdelve
-      MYSQL_PASSWORD: dbdelve
-      MYSQL_ROOT_PASSWORD: dbdelve
+      MYSQL_DATABASE: vernier_dev
+      MYSQL_USER: vernier
+      MYSQL_PASSWORD: vernier
+      MYSQL_ROOT_PASSWORD: vernier
     ports:
-      - "${DBDELVE_MYSQL_PORT:-53306}:3306"
+      - "${VERNIER_MYSQL_PORT:-53306}:3306"
     volumes:
-      - dbdelve-mysql-data:/var/lib/mysql
+      - vernier-mysql-data:/var/lib/mysql
       - ./dev/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pdbdelve"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pvernier"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -42,14 +42,14 @@ services:
   mariadb:
     image: mariadb:11.4
     environment:
-      MARIADB_DATABASE: dbdelve_dev
-      MARIADB_USER: dbdelve
-      MARIADB_PASSWORD: dbdelve
-      MARIADB_ROOT_PASSWORD: dbdelve
+      MARIADB_DATABASE: vernier_dev
+      MARIADB_USER: vernier
+      MARIADB_PASSWORD: vernier
+      MARIADB_ROOT_PASSWORD: vernier
     ports:
-      - "${DBDELVE_MARIADB_PORT:-53307}:3306"
+      - "${VERNIER_MARIADB_PORT:-53307}:3306"
     volumes:
-      - dbdelve-mariadb-data:/var/lib/mysql
+      - vernier-mariadb-data:/var/lib/mysql
       - ./dev/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
@@ -62,19 +62,19 @@ services:
     platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: DbDelve_MssqlSA1!
+      MSSQL_SA_PASSWORD: Vernier_MssqlSA1!
     entrypoint: ["/bin/bash", "/entrypoint.sh"]
     ports:
-      - "${DBDELVE_MSSQL_PORT:-51433}:1433"
+      - "${VERNIER_MSSQL_PORT:-51433}:1433"
     volumes:
-      - dbdelve-mssql-data:/var/opt/mssql
-      - ./dev/mssql/init:/dbdelve-init:ro
+      - vernier-mssql-data:/var/opt/mssql
+      - ./dev/mssql/init:/vernier-init:ro
       - ./dev/mssql/entrypoint.sh:/entrypoint.sh:ro
     healthcheck:
       # Proves the seed applied (a row count as the app login), not just that
       # the server answers: the same MySQL "healthy but half-seeded" trap. The
       # marker is what says the seed finished, since `accounts` fills early.
-      test: ["CMD-SHELL", "test -f /var/opt/mssql/data/.dbdelve-seeded && /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U dbdelve -P DBDelve_dev1 -d dbdelve_dev -b -Q 'SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.accounts;'"]
+      test: ["CMD-SHELL", "test -f /var/opt/mssql/data/.vernier-seeded && /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U vernier -P Vernier_dev1 -d vernier_dev -b -Q 'SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.accounts;'"]
       interval: 5s
       timeout: 5s
       retries: 60
@@ -85,18 +85,18 @@ services:
     image: mongo:8.2
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: dbdelve
-      MONGO_INITDB_DATABASE: dbdelve_dev
+      MONGO_INITDB_ROOT_PASSWORD: vernier
+      MONGO_INITDB_DATABASE: vernier_dev
     ports:
-      - "${DBDELVE_MONGO_PORT:-57017}:27017"
+      - "${VERNIER_MONGO_PORT:-57017}:27017"
     volumes:
-      - dbdelve-mongo-data:/data/db
+      - vernier-mongo-data:/data/db
       - ./dev/mongo/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       # The seed runs against a temporary mongod bound to 127.0.0.1 only, so
       # asking on the container's own address is what proves the real server
       # is up; the count is what proves the seed finished (it fills last).
-      test: ["CMD-SHELL", "mongosh --quiet --host \"$$(hostname -i)\" -u dbdelve -p dbdelve dbdelve_dev --eval 'quit(db.wide_metrics.countDocuments() === 25 ? 0 : 1)'"]
+      test: ["CMD-SHELL", "mongosh --quiet --host \"$$(hostname -i)\" -u vernier -p vernier vernier_dev --eval 'quit(db.wide_metrics.countDocuments() === 25 ? 0 : 1)'"]
       interval: 2s
       timeout: 5s
       retries: 90
@@ -104,15 +104,15 @@ services:
   redis:
     # 8 rather than 7: JSON and Search ship in the image itself.
     image: redis:8
-    entrypoint: ["/bin/sh", "/dbdelve-init/entrypoint.sh"]
+    entrypoint: ["/bin/sh", "/vernier-init/entrypoint.sh"]
     ports:
-      - "${DBDELVE_REDIS_PORT:-56379}:6379"
+      - "${VERNIER_REDIS_PORT:-56379}:6379"
     volumes:
-      - ./dev/redis:/dbdelve-init:ro
+      - ./dev/redis:/vernier-init:ro
     healthcheck:
       # The marker is what says the seed finished; a ping alone answers as
       # soon as the server is up, before a key is written.
-      test: ["CMD-SHELL", "test -f /tmp/dbdelve-seeded && redis-cli --user dbdelve --pass dbdelve --no-auth-warning ping"]
+      test: ["CMD-SHELL", "test -f /tmp/vernier-seeded && redis-cli --user vernier --pass vernier --no-auth-warning ping"]
       interval: 2s
       timeout: 3s
       retries: 30
@@ -122,21 +122,21 @@ services:
     # record this checkout's path in the stack that every worktree shares.
     build: ./dev/clickhouse
     environment:
-      CLICKHOUSE_DB: dbdelve_dev
-      CLICKHOUSE_USER: dbdelve
-      CLICKHOUSE_PASSWORD: dbdelve
+      CLICKHOUSE_DB: vernier_dev
+      CLICKHOUSE_USER: vernier
+      CLICKHOUSE_PASSWORD: vernier
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     ports:
-      - "${DBDELVE_CLICKHOUSE_PORT:-58123}:8123"
+      - "${VERNIER_CLICKHOUSE_PORT:-58123}:8123"
     ulimits:
       nofile: { soft: 262144, hard: 262144 }
     volumes:
-      - dbdelve-clickhouse-data:/var/lib/clickhouse
+      - vernier-clickhouse-data:/var/lib/clickhouse
     healthcheck:
       # Asked on the container's own address: the seed runs against a
       # temporary server bound to localhost only. type_gallery is seeded last,
       # so its rows prove the whole seed applied.
-      test: ["CMD-SHELL", "clickhouse-client --host \"$$(hostname -i)\" -u dbdelve --password dbdelve -q 'SELECT count() FROM dbdelve_dev.type_gallery' | grep -qx 2"]
+      test: ["CMD-SHELL", "clickhouse-client --host \"$$(hostname -i)\" -u vernier --password vernier -q 'SELECT count() FROM vernier_dev.type_gallery' | grep -qx 2"]
       interval: 2s
       timeout: 5s
       retries: 90
@@ -150,7 +150,7 @@ services:
   bastion:
     build: ./dev/ssh
     ports:
-      - "${DBDELVE_SSH_PORT:-52222}:22"
+      - "${VERNIER_SSH_PORT:-52222}:22"
     volumes:
       - ./dev/ssh/.generated:/keys:ro
     healthcheck:
@@ -170,9 +170,9 @@ services:
       retries: 30
 
 volumes:
-  dbdelve-postgres-data:
-  dbdelve-mysql-data:
-  dbdelve-mariadb-data:
-  dbdelve-mssql-data:
-  dbdelve-mongo-data:
-  dbdelve-clickhouse-data:
+  vernier-postgres-data:
+  vernier-mysql-data:
+  vernier-mariadb-data:
+  vernier-mssql-data:
+  vernier-mongo-data:
+  vernier-clickhouse-data:

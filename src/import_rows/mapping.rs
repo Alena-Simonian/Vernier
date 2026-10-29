@@ -286,7 +286,7 @@ pub(crate) fn check(
                 Ok(Some(Value::Json(json))) if engine.takes_new_fields() && has_operator(&json) => {
                     problems.push(problem(
                         source,
-                        format!("`{name}` holds a field starting with `$`, which is an operator, not a field DBDelve writes"),
+                        format!("`{name}` holds a field starting with `$`, which is an operator, not a field Vernier writes"),
                     ));
                     None
                 }
@@ -653,7 +653,7 @@ mod tests {
             line: None,
             column: Some(column),
             message: format!(
-                "`{field}` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator."
+                "`{field}` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator."
             ),
         };
         assert_eq!(
@@ -681,7 +681,7 @@ mod tests {
                 row: Some(0),
                 line: Some(1),
                 column: Some(0),
-                message: "`ok` holds a field starting with `$`, which is an operator, not a field DBDelve writes".into()
+                message: "`ok` holds a field starting with `$`, which is an operator, not a field Vernier writes".into()
             }]
         );
     }

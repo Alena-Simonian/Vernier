@@ -86,7 +86,7 @@ impl RenderOnce for MenuItem {
             .text_xs()
             .line_height(relative(1.))
             .rounded(cx.theme().radius.half())
-            // dbdelve patch: on frost the hover is a weaker share of the
+            // vernier patch: on frost the hover is a weaker share of the
             // selection's wash (see `popover_highlight`).
             .hover(|this| {
                 if popover_frosted(cx) {

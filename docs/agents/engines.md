@@ -7,7 +7,7 @@ Decided, and not to be re-litigated:
   MariaDB unless a bullet names it. A profile stored before it existed says
   `mysql` and stays MySQL. The `live_` tests in `mysql.rs` run once per server
   (`on_mysql::`, `on_mariadb::`).
-- **Ten functions generate the SQL DBDelve runs, and every one quotes through the engine's
+- **Ten functions generate the SQL Vernier runs, and every one quotes through the engine's
   `EngineSpec` (`Engine::quote_*` forwards to it on SQL engines):**
   `explorer::preview_sql`, `explorer::probe_sql` (the reference arrow's
   `SELECT 1 … LIMIT 1` per referencing relation), `explorer::count_sql` (the status bar's Count, a
@@ -50,7 +50,7 @@ Decided, and not to be re-litigated:
   switch on only what the engine does. The one hook, `Hooks::quote_value`,
   covers a literal that depends on the column's type (SQL Server) and returns
   `None` to fall back to `quote_literal`. A spec field is a bool, a strategy
-  enum or a list of names DBDelve's own code reads, never SQL text. Per-engine
+  enum or a list of names Vernier's own code reads, never SQL text. Per-engine
   snapshots in `src/sql_snapshots` hold the generated text, and
   `fake_spec.rs` shows a spec nobody wrote an arm for generating SQL.
 - **A relation tab's row number is the catalog's, never a count run unasked.**
@@ -66,7 +66,7 @@ Decided, and not to be re-litigated:
   are decided by the grammar rather than by any server.**
   `sql::is_generated_select` refuses whatever `tree_sitter_sequel` cannot parse
   whole, and that pin does not move, so a predicate the grammar does not know
-  is one DBDelve cannot run, however valid the server would find it. It has **no
+  is one Vernier cannot run, however valid the server would find it. It has **no
   `ESCAPE` clause and no infix `REGEXP`**. So the pattern operators lean on the
   engine's default `LIKE` escape, which is the backslash on Postgres and MySQL,
   and `like_pattern` escapes `%`, `_` and the backslash itself with it.
@@ -104,7 +104,7 @@ Decided, and not to be re-litigated:
   `SERVER_STATUS_IN_TRANS` flag private, so it reads the submitted text instead.
   **SQL Server's session runs with `SET XACT_ABORT ON`**, set at login like a
   timeout, because without it a constraint violation ends only its own
-  statement and the batch carries on to the `COMMIT` dbdelve wrote. dbdelve's
+  statement and the batch carries on to the `COMMIT` vernier wrote. vernier's
   own SQL is reached through `Connection::generated` (`Origin::Generated`: a
   relation tab's preview, a grid edit) or the private `internal_query`
   (`Origin::Internal`: catalog and structure queries), never `Connection::query`
@@ -120,21 +120,21 @@ Decided, and not to be re-litigated:
   `QUOTED_IDENTIFIER ON`, `ANSI_NULLS ON`, `ANSI_WARNINGS ON`,
   `IMPLICIT_TRANSACTIONS OFF`, `ROWCOUNT 0`, `DATEFORMAT ymd`), scoped to that
   one `sp_executesql` call so a `SET` the user made themselves is exactly as
-  they left it once dbdelve's statement returns. An import's lone `BEGIN
+  they left it once vernier's statement returns. An import's lone `BEGIN
   TRANSACTION`, `COMMIT` and `ROLLBACK` (`sql::is_transaction_bracket`) go out
   bare instead: one opened or closed inside `sp_executesql` changes
   `@@TRANCOUNT` across a module boundary, which the server reports as error
   266. `Origin::User` runs as typed, under nothing but the login default. A
   preflight before the statement (`PREFLIGHT_SQL`, run under `SESSION_OPTIONS`
-  for dbdelve's own statement and under the user's options for theirs, bar
+  for vernier's own statement and under the user's options for theirs, bar
   `USER_DESCRIBE_OPTIONS`' `IMPLICIT_TRANSACTIONS OFF` and `ROWCOUNT 0`, so it
   compiles the statement the way it will run) reads `@@TRANCOUNT`,
   and `transaction_outcome` reads it again after a failure: T-SQL has no
-  nested transactions, so dbdelve issues its own `ROLLBACK` only when its own
+  nested transactions, so vernier issues its own `ROLLBACK` only when its own
   `BEGIN TRANSACTION` batch opened the transaction from a count of zero, never
   one open before it arrived; when `XACT_ABORT` ends a transaction that
   predates the statement regardless, the error says that transaction -- not
-  dbdelve's -- was rolled back.
+  vernier's -- was rolled back.
 - **`sql_variant` and every CLR type (`geography`, `geometry`, `hierarchyid`,
   system type id 240) panic tiberius part way through a result it cannot
   decode**, which would otherwise close the session and the transaction in it.
@@ -166,7 +166,7 @@ Decided, and not to be re-litigated:
   request, with a client bound behind it (see its entry below). It goes in at connect and never into the
   user's submission (`AGENTS.md` hard rule 1, and on Postgres a `SET` inside their submission
   would be scoped to the implicit transaction around it). It therefore bounds
-  DBDelve's own catalog and structure queries too, which is intended. On SQL
+  Vernier's own catalog and structure queries too, which is intended. On SQL
   Server the timer wraps the whole of `Session::trip`, so it bounds every round
   trip a run needs and not just the statement: the preflight ahead of it
   (`@@TRANCOUNT` and the result-set describe) and the follow-ups behind it
@@ -235,7 +235,7 @@ Decided, and not to be re-litigated:
   does. SQL Server offers neither: its plans come from `SET SHOWPLAN_XML`, a
   session switch that must be a batch of its own, which is not a prefix on a
   copy of the statement. Server versions are not detected: an older server
-  refuses the statement and says so. On ClickHouse DBDelve offers plain
+  refuses the statement and says so. On ClickHouse Vernier offers plain
   `EXPLAIN` only, not the server's `EXPLAIN ANALYZE` (26.7+): its `EXPLAIN`
   plans the statement and never runs it, and its rows stay in the grid.
   `sqlparser`
@@ -422,7 +422,7 @@ Decided, and not to be re-litigated:
   callsite is picked by `INFO_TOKEN_LINE`, because the environment-change
   events share its target and shape; the exact `=0.12.3` pin is what keeps
   that line right, so a tiberius bump must re-check it (the live message tests
-  catch a wrong one). Internal trips never listen, so dbdelve's own `USE` and
+  catch a wrong one). Internal trips never listen, so vernier's own `USE` and
   describes say nothing. Messages from a submission that fails are lost with
   the error.
 - **SQL Server edit targets come from a describe**, as Postgres's do:
@@ -450,7 +450,7 @@ Decided, and not to be re-litigated:
   rather than dropped for having none. A foreign key's text carries its `ON
   DELETE`/`ON UPDATE` actions when they are not `NO ACTION`, and ` DISABLED`
   or ` NOT TRUSTED` when either is set.
-- **A SQL Server profile is held to its database.** Every name dbdelve writes
+- **A SQL Server profile is held to its database.** Every name vernier writes
   stops at the schema, so after a `USE` a generated `DELETE` would find the same
   name elsewhere. A run whose text says `USE` is followed by `DB_NAME()`; if it
   moved, the session is moved back and the run fails saying so, whether or not
@@ -502,7 +502,7 @@ Decided, and not to be re-litigated:
   object tab works. No Explain, and no Read-only backstop
   (`Engine::holds_read_only`). `Connection::connect` is a closure because
   holding `Arc<TursoDatabase>` directly overflows the compiler's `Send`
-  evaluation of `db::Connection`. Its live test reads `dbdelve_TURSO_PATH`.
+  evaluation of `db::Connection`. Its live test reads `vernier_TURSO_PATH`.
 - **DuckDB is embedded through duckdb-rs, `bundled`: a file, or a database in
   memory.** A blank path is a database in memory, gone when the profile
   disconnects; a path that does not exist is refused rather than created, as
@@ -549,12 +549,12 @@ Decided, and not to be re-litigated:
   then), a table in another database. DuckDB enforces its keys, unlike
   Snowflake. No Explain, and no Read-only backstop.
   Its tests need nothing external and run under plain `cargo test`.
-  `read_xlsx` is a table function of DBDelve's own over calamine (`db::xlsx`),
+  `read_xlsx` is a table function of Vernier's own over calamine (`db::xlsx`),
   registered at open, since DuckDB's `excel` extension cannot be linked in: a
   column whose filled cells are all numbers is a `DOUBLE`, anything else text
   as the sheet shows it. A data file dropped on the window or picked from the
   palette (`workspace::files`) opens in a DuckDB profile held in memory, made
-  if there is none, as a query tab whose `SELECT * FROM read_csv(…)` DBDelve
+  if there is none, as a query tab whose `SELECT * FROM read_csv(…)` Vernier
   wrote on screen and runs once the profile connects.
 - **Geometry is Postgres-only.** MySQL has a `GEOMETRY` type; rendering it is a
   separate decision nobody has asked for.
@@ -688,7 +688,7 @@ Decided, and not to be re-litigated:
   database, and only ClickHouse's dialect parses it
   (`TableObject::TableFunction`, in `sql::spec_verdict`), as does a `CREATE
   TABLE` with an external or file `ENGINE`.
-- **The user's statements share one session; DBDelve's own use none.** A
+- **The user's statements share one session; Vernier's own use none.** A
   session runs one query at a time, so `Connection::query` runs on the
   profile's session behind a mutex and `generated`, `internal_query` and every
   `KILL` go without one, never queued behind a long run. `query_alongside` is
@@ -697,7 +697,7 @@ Decided, and not to be re-litigated:
   parameter does not persist into a session. A session the server expired is
   `SESSION_NOT_FOUND`: the statement did not run, and the error says to run
   it again, since re-running silently could land in the wrong database.
-- **Cancel is `KILL QUERY … SYNC` by a `query_id` DBDelve chose, retried until
+- **Cancel is `KILL QUERY … SYNC` by a `query_id` Vernier chose, retried until
   it lands.** The id is on the token before the `POST` reaches the server, so
   a `KILL` can arrive first and match nothing: `Connection::cancel` sends it
   again every 100 ms until a row answers or the request returns, and after 10 s
@@ -714,7 +714,7 @@ Decided, and not to be re-litigated:
   timeout plus slack, as the whole wait for a response (`Bounds::user`) and
   as the longest silence between bytes (`Watched`, in `http.rs`), and hitting
   it `KILL`s the query. With no timeout the user's statements have no bound and
-  Cancel is the remedy; DBDelve's own catalog requests get 120 s. What is sent
+  Cancel is the remedy; Vernier's own catalog requests get 120 s. What is sent
   is decided once at connect from `system.settings` and checked by a
   validation request, so a `readonly=1` user whose profile pins another
   `max_execution_time` fails the connect in the server's words (`facts`).
@@ -816,7 +816,7 @@ Decided, and not to be re-litigated:
   is not changed.
 - **The importers read two names.** DBeaver's provider `clickhouse` and
   TablePlus's driver `ClickHouse`; a DBeaver connection given by a JDBC URL
-  is skipped, since DBDelve cannot read one for this engine. DBeaver's
+  is skipped, since Vernier cannot read one for this engine. DBeaver's
   provider id is from its source and unverified against a real file, and only
   the first entry of TablePlus's TLS dropdown is known; any other comes in as
   verify-full rather than something it may be stronger than.

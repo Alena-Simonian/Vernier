@@ -129,7 +129,7 @@ The shape a change to the main pane has to fit (`session.rs`, with the
   database the file opens as is stored blank, so a renamed file still opens.
 - **Where `Engine::picks_schema` (Postgres, Snowflake, DuckDB), the titlebar
   picks the schema unqualified names resolve in**, without a reconnect: tabs,
-  results and staged edits stay, since every name DBDelve writes names its
+  results and staged edits stay, since every name Vernier writes names its
   schema. `Workspace::set_schema` records it on the profile and on the live
   connection, which applies it to the sessions open and to every one it opens
   later. Postgres puts it in front of the session's own `search_path`, and

@@ -1,15 +1,15 @@
 // Run by the image's entrypoint through mongosh, as the root user, against
-// MONGO_INITDB_DATABASE (dbdelve_dev), on the first start of an empty volume.
+// MONGO_INITDB_DATABASE (vernier_dev), on the first start of an empty volume.
 
-// Created in dbdelve_dev so the dev URL needs no `authSource`. Without
+// Created in vernier_dev so the dev URL needs no `authSource`. Without
 // listDatabases, `listDatabases` answers with the databases the user holds a
 // role on, which is exactly these two.
 db.createUser({
-  user: "dbdelve",
-  pwd: "dbdelve",
+  user: "vernier",
+  pwd: "vernier",
   roles: [
-    { role: "readWrite", db: "dbdelve_dev" },
-    { role: "readWrite", db: "dbdelve_archive" },
+    { role: "readWrite", db: "vernier_dev" },
+    { role: "readWrite", db: "vernier_archive" },
   ],
 });
 
@@ -120,7 +120,7 @@ db.documents.insertMany([
   {
     _id: 2,
     title: "Large values",
-    body: "DBDelve keeps the complete value while the grid clips visually. ".repeat(2048),
+    body: "Vernier keeps the complete value while the grid clips visually. ".repeat(2048),
     document: {
       kind: "large",
       values: Array.from({ length: 500 }, (_, i) => ({ index: i + 1, square: (i + 1) * (i + 1) })),
@@ -150,7 +150,7 @@ db.bson_types.insertOne({
   timestamp: Timestamp({ t: 1705311000, i: 1 }),
   binary_generic: HexData(0, "00ff"),
   binary_uuid: UUID("018f1f6e-7c2a-7000-8000-0000000000ff"),
-  regex: /^dbdelve.*$/i,
+  regex: /^vernier.*$/i,
   javascript: Code("function () { return 1; }"),
   min_key: MinKey(),
   max_key: MaxKey(),
@@ -209,7 +209,7 @@ db.order_items.insertMany([
   { _id: 3, order: { account_id: accountIds[1], number: 2001 }, description: "Compiler seat", quantity: 1 },
 ]);
 
-const archive = db.getSiblingDB("dbdelve_archive");
+const archive = db.getSiblingDB("vernier_archive");
 archive.closed_accounts.insertMany([
   { _id: 1, account_id: accountIds[2], closed_at: ISODate("2024-07-01T00:00:00Z") },
   { _id: 2, account_id: accountIds[4], closed_at: ISODate("2024-07-04T12:00:00Z") },

@@ -52,7 +52,7 @@ pub(super) fn editor_popover(id: impl Into<ElementId>, cx: &App) -> Stateful<Div
         .flex_none()
         .occlude()
         .popover_style(cx)
-        // dbdelve patch: no shadow under frost (see `popover_style`).
+        // vernier patch: no shadow under frost (see `popover_style`).
         .when(!popover_frosted(cx), |this| this.shadow_md())
         .text_xs()
         .p_1()

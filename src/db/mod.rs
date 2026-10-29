@@ -106,7 +106,7 @@ impl CancelToken {
 
 /// Which engine a profile talks to.
 ///
-/// Also the answer to the only three questions dbdelve's own generated SQL asks
+/// Also the answer to the only three questions vernier's own generated SQL asks
 /// about dialect. There being three is why there is no `Dialect` type: an
 /// engine quotes an identifier, quotes a literal, and qualifies a name.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -184,7 +184,7 @@ impl Syntax {
 /// The distinction is not a detail of presentation: `Plan` only plans, while
 /// `Analyze` *runs the statement* to report what it really cost. Explaining a
 /// `DELETE` under `Analyze` deletes. That is why the two are a choice the user
-/// makes in front of the button rather than a mode dbdelve picks for them.
+/// makes in front of the button rather than a mode vernier picks for them.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ExplainMode {
     /// Plan only. Never executes the statement.
@@ -289,7 +289,7 @@ impl Engine {
         Self::schemes()
             .find(|(spelling, _)| *spelling == value)
             .map(|(_, engine)| engine)
-            .ok_or_else(|| format!("{value} is not a database engine dbdelve speaks."))
+            .ok_or_else(|| format!("{value} is not a database engine Vernier speaks."))
     }
 
     /// The engine whose files end in `extension`, whatever its case.
@@ -563,7 +563,7 @@ impl Engine {
     }
 
     /// Why a statement `sql::classify` cannot read is refused in Read-only,
-    /// finishing "dbdelve can't parse this, and …".
+    /// finishing "Vernier can't parse this, and …".
     pub fn unreadable_reason(self) -> &'static str {
         match self.spec().sql.unreadable_floor {
             UnreadableFloor::None => {
@@ -650,7 +650,7 @@ impl Engine {
         }
     }
 
-    /// The inverse, for reading back a name dbdelve wrote — matching a sort key in
+    /// The inverse, for reading back a name vernier wrote — matching a sort key in
     /// a statement to the column header it belongs to, say.
     ///
     /// Anything that is not a quoted identifier comes back unchanged: a bare
@@ -749,7 +749,7 @@ impl Engine {
 
     /// Whether a query tab's edits are shown in the review dialog an object
     /// tab's are, rather than appended to its buffer. A row named by every
-    /// value is written only behind the exactly-one-row count DBDelve runs
+    /// value is written only behind the exactly-one-row count Vernier runs
     /// before each write; a copy left in the buffer would run without it when
     /// the user ran it again.
     pub fn reviews_query_edits(self) -> bool {
@@ -818,8 +818,8 @@ pub(super) fn percent_decoded(value: &str) -> Result<String, String> {
     String::from_utf8(decoded).map_err(|_| "Connection URL path is not valid UTF-8.".to_string())
 }
 
-/// A server engine's URL, read by dbdelve rather than by any driver: the
-/// userinfo, host, port and database, plus the two TLS keys dbdelve owns.
+/// A server engine's URL, read by vernier rather than by any driver: the
+/// userinfo, host, port and database, plus the two TLS keys vernier owns.
 pub(super) fn server_from_url(url: &str, engine: &str) -> Result<ServerConfig, String> {
     let parsed =
         url::Url::parse(url).map_err(|error| format!("Connection URL is invalid: {error}"))?;
@@ -844,12 +844,12 @@ pub(super) fn server_from_url(url: &str, engine: &str) -> Result<ServerConfig, S
                 root_certificate = Some(value.trim().to_string()).filter(|path| !path.is_empty());
             }
             // Refused rather than dropped. The driver's options are built from
-            // fields here, so a parameter dbdelve does not carry has nowhere to
+            // fields here, so a parameter vernier does not carry has nowhere to
             // go, and silently ignoring one is how a connection ends up not
             // being the connection that was asked for.
             other => {
                 return Err(format!(
-                    "Connection URL parameter {other} is not one dbdelve can pass to {engine}."
+                    "Connection URL parameter {other} is not one Vernier can pass to {engine}."
                 ));
             }
         }
@@ -1132,7 +1132,7 @@ impl ConnectionConfig {
         }
     }
 
-    /// The scheme picks the engine, and the engine parses the rest. dbdelve never
+    /// The scheme picks the engine, and the engine parses the rest. vernier never
     /// guesses from the shape of a URL: a host-looking string is a host to
     /// three different drivers.
     pub fn from_url(url: &str) -> Result<Self, String> {
@@ -1147,7 +1147,7 @@ impl ConnectionConfig {
             })?;
 
         match Engine::parse(scheme).map_err(|_| {
-            format!("Connection URL scheme {scheme}:// is not a database dbdelve speaks.")
+            format!("Connection URL scheme {scheme}:// is not a database Vernier speaks.")
         })? {
             Engine::Postgres => postgres::config_from_url(url).map(Self::Postgres),
             Engine::MySql => mysql::config_from_url(url).map(Self::MySql),
@@ -1439,10 +1439,10 @@ impl Connection {
         }
     }
 
-    /// Run a statement dbdelve wrote at the user's ask -- a relation tab's
+    /// Run a statement vernier wrote at the user's ask -- a relation tab's
     /// preview, or an edit -- verbatim, as [`Connection::query`] does. SQL
     /// Server runs it differently: its session options are the user's to
-    /// `SET`, and dbdelve's SQL is written for particular ones. So does Redis,
+    /// `SET`, and vernier's SQL is written for particular ones. So does Redis,
     /// where a write that changed nothing, a `RENAMENX` onto a name that is
     /// taken, is an error rather than a `0`. And Snowflake, which sends it
     /// without the active schema, a field only the user's statements carry.
@@ -1693,7 +1693,7 @@ impl Connection {
     }
 
     /// The statements that would create this relation, for the clipboard:
-    /// nothing dbdelve does runs them. The server's own rendering wherever it
+    /// nothing vernier does runs them. The server's own rendering wherever it
     /// has one; Postgres and SQL Server tables are written back out of their
     /// structure ([`create_table`]).
     pub fn ddl(&self, schema: &str, relation: &str, kind: RelationKind) -> Result<String, DbError> {
@@ -1722,13 +1722,13 @@ impl Connection {
     ///
     /// There is no cancelled state anywhere above this: a stopped statement
     /// comes back out of [`Connection::query`] as an ordinary `Err` carrying the
-    /// server's own words, which is a truer account than dbdelve could write.
+    /// server's own words, which is a truer account than vernier could write.
     ///
     /// What it cannot do. It reaches only the statement running on *this*
     /// connection, so a catalog or structure load queued behind it on the same
     /// mutex is untouched -- the profile is still frozen until the running
     /// statement lets go. And it is the *slow* runaway it helps with, not the
-    /// fat one: Postgres buffers a whole result set before dbdelve sees a row, so
+    /// fat one: Postgres buffers a whole result set before vernier sees a row, so
     /// a query already returning gigabytes is past the point where stopping the
     /// server helps.
     pub fn cancel(&self, cancel: &CancelToken) -> Result<(), DbError> {
@@ -1782,7 +1782,7 @@ impl Connection {
     ///
     /// Defence in depth, not a privilege boundary: this is a session setting,
     /// the same user can flip it back with a statement of their own, and it is
-    /// only ever sent from inside dbdelve. A role without write grants is the
+    /// only ever sent from inside vernier. A role without write grants is the
     /// only thing that actually stops a write -- this exists so a bug in
     /// `sql::gate` (src/sql.rs:1268), the real boundary, is not the only thing
     /// standing between Read-only and a write reaching the server.
@@ -1815,7 +1815,7 @@ impl Connection {
 pub struct Column {
     pub name: String,
     /// The server's own name for the column's type — `int4`, `jsonb`,
-    /// `timestamptz` — as a dbdelve-owned string, never a driver type.
+    /// `timestamptz` — as a vernier-owned string, never a driver type.
     ///
     /// Absent rather than guessed. The simple query protocol carries no type
     /// information at all, so this is learned by describing the statement, and
@@ -2038,7 +2038,7 @@ impl RowBuilder {
                 ends: self.ends.as_slice().into(),
             }),
             true => Err(plain_error(
-                "A row holds more than 2 GB of text, more than DBDelve can show.".into(),
+                "A row holds more than 2 GB of text, more than Vernier can show.".into(),
             )),
         };
         self.text.clear();
@@ -2363,7 +2363,7 @@ pub struct QueryResult {
     /// columns are typed whole ([`Column::data_type`]).
     pub cell_types: Vec<Vec<&'static str>>,
     /// Where these rows can be written back to, when they can be at all.
-    /// `None` is the answer for every result set dbdelve cannot address a single
+    /// `None` is the answer for every result set Vernier cannot address a single
     /// row of, and it is not an error — see [`Connection::edit_target`].
     pub edit: Option<EditTarget>,
     /// Why these rows cannot be written back, where the engine knows and the
@@ -2405,7 +2405,7 @@ pub fn is_cancel(engine: Engine, error: &DbError) -> bool {
         Engine::Turso => message == turso::INTERRUPTED,
         // Followed by what became of the transaction a bracketed batch opened.
         Engine::DuckDb => message.starts_with(duckdb::INTERRUPTED),
-        // The second is dbdelve's own, a cancel between partitions.
+        // The second is vernier's own, a cancel between partitions.
         Engine::Snowflake => matches!(message, "SQL execution canceled" | "Cancelled."),
         Engine::SqlServer => message.starts_with(mssql::CANCELLED),
         Engine::MongoDb => message == "Cancelled.",
@@ -2946,11 +2946,11 @@ pub(super) fn terminated(statement: &str) -> String {
     format!("{};", statement.trim().trim_end_matches(';'))
 }
 
-/// Reads foreign keys out of a result whose columns are named the way dbdelve
+/// Reads foreign keys out of a result whose columns are named the way vernier
 /// names them: `column_name`, `referenced_schema`, `referenced_table`,
 /// `referenced_column`.
 ///
-/// This is shared *parsing of a dbdelve-named result shape*, not shared dispatch.
+/// This is shared *parsing of a vernier-named result shape*, not shared dispatch.
 /// Postgres and MySQL each write their own catalog query and each choose these
 /// four aliases, so the row-to-struct step is the same work twice; SQLite does
 /// not use this at all, because `PRAGMA foreign_key_list` reports a different
@@ -3552,37 +3552,37 @@ mod tests {
     #[test]
     fn a_url_scheme_picks_the_engine_and_an_unknown_one_is_named() {
         assert_eq!(
-            ConnectionConfig::from_url("postgresql://someone@db.example.test/dbdelve_test")
+            ConnectionConfig::from_url("postgresql://someone@db.example.test/vernier_test")
                 .unwrap()
                 .engine(),
             Engine::Postgres
         );
         assert_eq!(
-            ConnectionConfig::from_url("sqlite:///tmp/dbdelve.db").unwrap(),
+            ConnectionConfig::from_url("sqlite:///tmp/vernier.db").unwrap(),
             ConnectionConfig::Sqlite {
-                path: "/tmp/dbdelve.db".into(),
+                path: "/tmp/vernier.db".into(),
                 statement_timeout: 0
             }
         );
 
         assert_eq!(
-            ConnectionConfig::from_url("mongodb://db.example.test/dbdelve")
+            ConnectionConfig::from_url("mongodb://db.example.test/vernier")
                 .unwrap()
                 .engine(),
             Engine::MongoDb
         );
         // Named, not merely rejected: "invalid URL" leaves the user guessing
-        // which part of it dbdelve objected to.
+        // which part of it vernier objected to.
         let error = ConnectionConfig::from_url("cassandra://db.example.test/ks").unwrap_err();
         assert!(error.contains("cassandra"), "{error}");
-        assert!(ConnectionConfig::from_url("db.example.test/dbdelve").is_err());
+        assert!(ConnectionConfig::from_url("db.example.test/vernier").is_err());
     }
 
     #[test]
     fn a_sqlite_profile_has_no_server_half_and_a_postgres_one_does() {
         assert!(
             ConnectionConfig::Sqlite {
-                path: "/tmp/dbdelve.db".into(),
+                path: "/tmp/vernier.db".into(),
                 statement_timeout: 0
             }
             .server()
@@ -3599,11 +3599,11 @@ mod tests {
     fn an_endpoint_names_whatever_was_being_talked_to() {
         assert_eq!(
             ConnectionConfig::Sqlite {
-                path: "/tmp/dbdelve.db".into(),
+                path: "/tmp/vernier.db".into(),
                 statement_timeout: 0
             }
             .endpoint(),
-            "/tmp/dbdelve.db"
+            "/tmp/vernier.db"
         );
         assert_eq!(
             ServerConfig {
@@ -3630,7 +3630,7 @@ mod tests {
         let stored = ConnectionConfig::Postgres(ServerConfig {
             host: "db.example.test".into(),
             port: Some(5432),
-            database: "dbdelve".into(),
+            database: "vernier".into(),
             user: "someone".into(),
             password: "secret".into(),
             ..ServerConfig::default()
@@ -3658,7 +3658,7 @@ mod tests {
         })));
         assert!(stored.needs_reconnect(&ConnectionConfig::MySql(stored.server().unwrap().clone())));
         assert!(stored.needs_reconnect(&ConnectionConfig::Sqlite {
-            path: "/tmp/dbdelve.db".into(),
+            path: "/tmp/vernier.db".into(),
             statement_timeout: 0
         }));
     }
@@ -3681,7 +3681,7 @@ mod tests {
     #[test]
     fn each_engine_quotes_the_way_its_own_server_reads() {
         // An identifier and a literal are both user data, and both reach a
-        // statement dbdelve generates. The escape is what stops a table called
+        // statement vernier generates. The escape is what stops a table called
         // `odd"name` from ending the identifier early.
         assert_eq!(
             Engine::Postgres.quote_identifier("odd\"name"),
@@ -3724,8 +3724,8 @@ mod tests {
             "\"odd\"\"schema\".\"table\""
         );
         assert_eq!(
-            Engine::MySql.qualified("dbdelve_dev", "table"),
-            "`dbdelve_dev`.`table`"
+            Engine::MySql.qualified("vernier_dev", "table"),
+            "`vernier_dev`.`table`"
         );
     }
 
@@ -3908,7 +3908,7 @@ mod tests {
         let error = ConnectionConfig::from_url("clickhouse://u@h/db?compress=1").unwrap_err();
         assert_eq!(
             error,
-            "Connection URL parameter compress is not one dbdelve can pass to ClickHouse."
+            "Connection URL parameter compress is not one Vernier can pass to ClickHouse."
         );
 
         assert_eq!(Engine::parse("clickhouse"), Ok(Engine::ClickHouse));
@@ -3930,8 +3930,8 @@ mod tests {
     #[test]
     fn sql_server_is_a_server_engine_reached_by_either_url_scheme() {
         for url in [
-            "mssql://someone%40example.com@db.example.test:1433/dbdelve_dev",
-            "sqlserver://someone%40example.com@db.example.test:1433/dbdelve_dev",
+            "mssql://someone%40example.com@db.example.test:1433/vernier_dev",
+            "sqlserver://someone%40example.com@db.example.test:1433/vernier_dev",
         ] {
             let config = ConnectionConfig::from_url(url).unwrap();
             assert_eq!(config.engine(), Engine::SqlServer, "{url}");
@@ -4169,7 +4169,7 @@ mod tests {
 
     #[test]
     fn a_quoted_identifier_reads_back_as_the_name_it_was() {
-        // The two halves have to agree or dbdelve cannot recognise its own
+        // The two halves have to agree or vernier cannot recognise its own
         // output: a sort key it wrote would not match the header it came from.
         for engine in Engine::ALL {
             for name in ["id", "odd\"name", "odd`name", "spaced name", ""] {

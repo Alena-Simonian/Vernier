@@ -97,7 +97,7 @@ pub(crate) fn dropdown_popup(
         Animation::new(DROPDOWN_ENTER_DURATION).with_easing(ease_out_cubic),
         move |surface, delta| {
             let surface = surface.top(px(travel * (1. - delta))).opacity(delta);
-            // dbdelve patch: the blur ignores `opacity`, so a frosted surface
+            // vernier patch: the blur ignores `opacity`, so a frosted surface
             // ramps the blur itself; at full strength from the first frame the
             // frost would land before the tint fading in over it.
             if frosted {

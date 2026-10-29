@@ -8,7 +8,7 @@
     } ],
     "rowType" : [ {
       "name" : "schema_name",
-      "database" : "DBDELVE_TEST",
+      "database" : "VERNIER_TEST",
       "schema" : "INFORMATION_SCHEMA",
       "table" : "TABLES",
       "collation" : null,
@@ -20,7 +20,7 @@
       "type" : "text"
     }, {
       "name" : "relation_name",
-      "database" : "DBDELVE_TEST",
+      "database" : "VERNIER_TEST",
       "schema" : "INFORMATION_SCHEMA",
       "table" : "TABLES",
       "collation" : null,
@@ -44,7 +44,7 @@
       "type" : "text"
     }, {
       "name" : "size_bytes",
-      "database" : "DBDELVE_TEST",
+      "database" : "VERNIER_TEST",
       "schema" : "INFORMATION_SCHEMA",
       "table" : "TABLES",
       "collation" : null,

@@ -1,4 +1,4 @@
-# <img src="assets/icon/dbdelve.svg" alt="" width="48" align="absmiddle"> DBDelve
+# <img src="assets/icon/vernier.svg" alt="" width="48" align="absmiddle"> Vernier
 
 A fast, native, cross-platform, multi-engine database client. Written in Rust
 with GPUI, no Electron and no JVM: instant startup, friendly on your memory,
@@ -7,9 +7,9 @@ introduce limits.
 
 > Early days. Everything listed below works today.
 
-![DBDelve in Gruvbox Dark Glass: a SELECT on the events table in the editor and its result grid below](assets/screenshots/query-dark.png)
+![Vernier in Gruvbox Dark Glass: a SELECT on the events table in the editor and its result grid below](assets/screenshots/query-dark.png)
 
-![DBDelve in Gruvbox Light Glass: a join in the editor and its result grid below](assets/screenshots/query-light.png)
+![Vernier in Gruvbox Light Glass: a join in the editor and its result grid below](assets/screenshots/query-light.png)
 
 Scrolling a million rows:
 
@@ -29,17 +29,17 @@ I wanted something which is performant, modern and consumes little ram. The exis
 
 ```sh
 brew install --cask ShayanAbbas1/dbdelve/dbdelve
-xattr -dr com.apple.quarantine /Applications/DBDelve.app
+xattr -dr com.apple.quarantine /Applications/Vernier.app
 ```
 
 Don't skip the second line: the app isn't notarized, so macOS won't open it
 until the quarantine flag is cleared.
 
-**Linux** (x86_64 or aarch64): `yay -S dbdelve-bin` from the AUR, or the
+**Linux** (x86_64 or aarch64): `yay -S vernier-bin` from the AUR, or the
 tarball or AppImage from [the latest release][releases].
 
 **Windows** (x86_64): unzip the zip from [the latest release][releases] and run
-`dbdelve.exe`.
+`vernier.exe`.
 
 Updating, the `.dmg`, Linux requirements, building from source and where your
 data lives are all in [docs/install.md](docs/install.md).
@@ -72,11 +72,11 @@ More engines are planned.
 
 - **Never mistake prod for staging.** Every connection is isolated and can
   color the title bar. Run it read-only, read-write or with full access, and
-  DBDelve asks before anything destructive.
+  Vernier asks before anything destructive.
 
   ![The connection form, grouped into connection, security and behaviour, with a color and a project for the connection](assets/screenshots/connection-form.png)
 
-- **Edits you can read first.** Change a cell and DBDelve writes the `UPDATE`
+- **Edits you can read first.** Change a cell and Vernier writes the `UPDATE`
   for you to check before it runs.
 - **Keep the columns you need.** Hide or pin columns, and the layout survives
   a restart.
@@ -112,14 +112,14 @@ More engines are planned.
   your config, agent and hardware keys just work.
 
 Free and open source, nothing behind a paywall, and no telemetry: the only
-request DBDelve makes on its own is an update check, which you can turn off.
+request Vernier makes on its own is an update check, which you can turn off.
 
 ## Benchmarks
 
-DBDelve 0.3.6 against DBeaver 25.3.1 on the same Postgres table, median of 5
+Vernier 0.3.6 against DBeaver 25.3.1 on the same Postgres table, median of 5
 runs each (2026-10-11, M1 Pro, 32 GB):
 
-|                   | DBDelve | DBeaver |
+|                   | Vernier | DBeaver |
 | ----------------- | ------- | ------- |
 | Launch            | 1.1 s   | 5.2 s   |
 | Idle memory       | 133 MB  | 606 MB  |
@@ -138,5 +138,5 @@ Ideas and discussion on [Discord](https://discord.gg/upKpusAnS).
 
 Copyright (C) 2026 Shayan Abbas and contributors, licensed under the
 [GPL-3.0](LICENSE). Code contributed before the switch was released under the
-[MIT License](licenses/MIT-dbdelve.txt), and that notice still applies to it.
+[MIT License](licenses/MIT-vernier.txt), and that notice still applies to it.
 Third-party font and theme licenses are in [NOTICES.md](NOTICES.md).

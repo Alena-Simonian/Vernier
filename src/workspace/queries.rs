@@ -316,7 +316,7 @@ impl Workspace {
         };
         let tab = profile.session.active;
         // An object tab has no buffer of its own: running it again is a refresh
-        // of the rows dbdelve fetched, which is the only thing there is to run.
+        // of the rows vernier fetched, which is the only thing there is to run.
         if let Tab::Object(id) = tab {
             self.refresh_relation(id, cx);
             return;
@@ -1091,7 +1091,7 @@ impl Workspace {
             return;
         };
         let tab = profile.session.active;
-        // An object tab's rows come from SQL dbdelve wrote, and its surface has no
+        // An object tab's rows come from SQL vernier wrote, and its surface has no
         // buffer to point at. Nobody has asked to explain a preview.
         let Tab::Query(_) = tab else {
             return;
@@ -1217,7 +1217,7 @@ impl Workspace {
 
     /// Whether the visible buffer already has a name — which is what makes the
     /// difference between saving it and renaming it. A relation's tab never
-    /// does: it holds SQL dbdelve wrote, not a file the user opened.
+    /// does: it holds SQL vernier wrote, not a file the user opened.
     pub(crate) fn named(&self) -> bool {
         self.profile().is_some_and(|profile| {
             matches!(profile.session.active, Tab::Query(_))
@@ -1881,7 +1881,7 @@ impl Workspace {
     /// under the one now running cannot be told from fresh ones.
     ///
     /// `explain` says this submission is the Explain command's, the statement
-    /// under dbdelve's prefix, and diverts its result away from the grid and
+    /// under vernier's prefix, and diverts its result away from the grid and
     /// into the tab's plan, as a lone statement the user typed as an `EXPLAIN`
     /// is diverted without it (`sql::typed_explain`). It routes through here rather
     /// than down a path of its own because everything around the result — the
@@ -2067,7 +2067,7 @@ impl Workspace {
         cx.notify();
 
         // Read from the statement that is about to run, so the headers say what
-        // the rows on screen are actually ordered by rather than what dbdelve
+        // the rows on screen are actually ordered by rather than what vernier
         // last intended to ask for.
         // A preview runs in the engine's own paging, which on SQL Server the
         // grammar cannot read; its sort is read from the spelling it was
@@ -2086,11 +2086,11 @@ impl Workspace {
         let keys = keys.unwrap_or_default();
         // Kept only where it is read back: the query tab's grid has to be able
         // to say which statement produced it. An `EXPLAIN` produces no rows to
-        // describe and belongs in nobody's history -- it is dbdelve's prefix over
+        // describe and belongs in nobody's history -- it is vernier's prefix over
         // the user's statement, and the statement itself is already there.
         let statement = (matches!(tab, Tab::Query(_)) && explain.is_none()).then(|| sql.clone());
         // What the plan pane says it is a plan of: the user's statement, without
-        // the prefix dbdelve put in front of it.
+        // the prefix vernier put in front of it.
         let explained = explain
             .map(|mode| {
                 let prefix = engine.explain_prefix(mode).unwrap_or_default();
@@ -2108,8 +2108,8 @@ impl Workspace {
             let ran = statement.as_ref().or(explained.as_ref());
             tab.ran_from = tab.sent_from.take().filter(|(_, sent)| Some(sent) == ran);
         }
-        // Everything an object tab runs is dbdelve's, and a query tab runs
-        // dbdelve's statement only when an edit is applied from its grid, the
+        // Everything an object tab runs is vernier's, and a query tab runs
+        // vernier's statement only when an edit is applied from its grid, the
         // one run that carries a refresh -- bar a `Return`, which the user's
         // own statement carries.
         let generated = matches!(tab, Tab::Object(_))
@@ -2119,7 +2119,7 @@ impl Workspace {
         // Recorded on the way out rather than on the way back: the history is
         // what the user ran, and a statement that failed is exactly the one
         // worth getting back. Only the buffer's — a relation's preview is SQL
-        // dbdelve wrote, and nobody asked to keep it. Nor an edit reviewed
+        // vernier wrote, and nobody asked to keep it. Nor an edit reviewed
         // rather than appended: recalled into a buffer, it would run without
         // the count that guards it.
         if let Some(statement) = &statement
@@ -2162,7 +2162,7 @@ impl Workspace {
         // Rows land in the grid as they arrive, but only in a grid cleared for
         // them: a refresh keeps the rows it is replacing until the new ones are
         // whole, and a plan's rows never reach the grid at all. A relation's
-        // preview is dbdelve's statement and streams like the user's; a query
+        // preview is vernier's statement and streams like the user's; a query
         // tab's generated run is an edit, with no rows to stream.
         let streams = matches!(tab, Tab::Object(_)) || !generated;
         let feed = (!keep_rows && streams && explaining.is_none()).then(Feed::default);
@@ -2484,7 +2484,7 @@ impl Workspace {
                                     });
                                 }
                                 // Into the user's statement, not the prefix
-                                // dbdelve put in front of it, which is on no
+                                // vernier put in front of it, which is on no
                                 // screen to count from.
                                 let prefix = explain
                                     .and_then(|mode| engine.explain_prefix(mode))

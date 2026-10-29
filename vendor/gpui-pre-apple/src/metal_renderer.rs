@@ -9,7 +9,7 @@ use gpui::{
 #[cfg(any(test, feature = "bench-support", feature = "test-support"))]
 use image::RgbaImage;
 use objc2::runtime::AnyObject;
-// dbdelve patch: backdrop blur.
+// vernier patch: backdrop blur.
 use objc2::{class, msg_send, rc::Retained};
 
 use foreign_types::{ForeignType, ForeignTypeRef};
@@ -41,11 +41,11 @@ const PATH_SAMPLE_COUNT: u32 = 4;
 const INSTANCE_BUFFER_ALIGNMENT: usize = 256;
 const MAX_INSTANCE_BUFFER_SIZE: usize = 256 * 1024 * 1024;
 
-// dbdelve patch: the backdrop blur's gaussian is Apple's MPSImageGaussianBlur.
+// vernier patch: the backdrop blur's gaussian is Apple's MPSImageGaussianBlur.
 #[link(name = "MetalPerformanceShaders", kind = "framework")]
 unsafe extern "C" {}
 
-/// dbdelve patch: frames rendered without a backdrop blur before the scratch
+/// vernier patch: frames rendered without a backdrop blur before the scratch
 /// textures and kernels behind it are released. Long enough to ride out a
 /// popover closing and reopening, short enough to reclaim the memory soon.
 const SCRATCH_RELEASE_AFTER_FRAMES: u32 = 30;
@@ -135,7 +135,7 @@ pub struct MetalRenderer {
     monochrome_sprites_pipeline_state: metal::RenderPipelineState,
     polychrome_sprites_pipeline_state: metal::RenderPipelineState,
     surfaces_pipeline_state: metal::RenderPipelineState,
-    // dbdelve patch: backdrop blur. The scratch textures (a drawable snapshot
+    // vernier patch: backdrop blur. The scratch textures (a drawable snapshot
     // and its blurred copy) are sized to the padded blur region, not the
     // drawable, and kept in a small LRU alongside the gaussian kernels, so a
     // frame with two blurs of different sizes or radii doesn't rebuild either.
@@ -157,7 +157,7 @@ pub struct MetalRenderer {
     headless_render_target: Option<metal::Texture>,
 }
 
-// dbdelve patch: backdrop blur.
+// vernier patch: backdrop blur.
 struct BackdropTextures {
     scratch: metal::Texture,
     blurred: metal::Texture,
@@ -391,7 +391,7 @@ impl MetalRenderer {
             MTLPixelFormat::BGRA8Unorm,
         );
 
-        // dbdelve patch: blending is off, as the blur replaces its region with
+        // vernier patch: blending is off, as the blur replaces its region with
         // the blurred snapshot (fragments outside the rounded rect discard).
         let backdrop_blur_pipeline_state = build_pipeline_state_no_blend(
             &device,
@@ -441,7 +441,7 @@ impl MetalRenderer {
             monochrome_sprites_pipeline_state,
             polychrome_sprites_pipeline_state,
             surfaces_pipeline_state,
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             backdrop_blur_pipeline_state,
             backdrop_textures: Vec::new(),
             backdrop_kernels: Vec::new(),
@@ -551,7 +551,7 @@ impl MetalRenderer {
             (viewport_size.width.ceil() as i32).into(),
             (viewport_size.height.ceil() as i32).into(),
         );
-        // dbdelve patch: a backdrop blur blits from the drawable, which Metal
+        // vernier patch: a backdrop blur blits from the drawable, which Metal
         // forbids on a framebuffer-only one. Readable drawables can cost the
         // compositor some bandwidth, so they're only asked for from the first
         // frame with a blur until its resources are released.
@@ -775,7 +775,7 @@ impl MetalRenderer {
         let command_buffer = command_queue.new_command_buffer();
         let alpha = if self.opaque { 1. } else { 0. };
 
-        // dbdelve patch: the blur's scratch textures are only worth holding
+        // vernier patch: the blur's scratch textures are only worth holding
         // while they're in use. Releasing them with frames in flight is safe:
         // command buffers retain the resources they reference.
         if scene.backdrop_blurs.is_empty() {
@@ -794,7 +794,7 @@ impl MetalRenderer {
             Some(metal::MTLClearColor::new(0., 0., 0., alpha)),
         );
 
-        // dbdelve patch: blurs interleave with the batches by draw order. Before
+        // vernier patch: blurs interleave with the batches by draw order. Before
         // the first batch at or above a blur's order, break the pass, snapshot
         // what's been drawn, blur it and paint it back.
         let mut pending_blurs = scene.backdrop_blurs.iter().enumerate().peekable();
@@ -879,7 +879,7 @@ impl MetalRenderer {
                 PrimitiveBatch::SubpixelSprites { .. } => unreachable!(),
             }
         }
-        // dbdelve patch: blurs ordered above every batch still draw.
+        // vernier patch: blurs ordered above every batch still draw.
         for (index, blur) in pending_blurs {
             command_encoder = self.draw_backdrop_blur(
                 index,
@@ -897,7 +897,7 @@ impl MetalRenderer {
         Ok(command_buffer.to_owned())
     }
 
-    /// dbdelve patch: snapshot the drawable beneath `blur`, gaussian-blur it
+    /// vernier patch: snapshot the drawable beneath `blur`, gaussian-blur it
     /// and paint it back inside the blur's rounded bounds. This ends
     /// `command_encoder` and returns the open encoder of the pass that drew the
     /// blur, for the batches that follow to continue in; a blur with nothing
@@ -1027,7 +1027,7 @@ impl MetalRenderer {
         command_encoder
     }
 
-    /// dbdelve patch: the backdrop blur's scratch textures, sized to the padded
+    /// vernier patch: the backdrop blur's scratch textures, sized to the padded
     /// blur region. Extents are rounded up to 64px and matched exactly, and at
     /// most four pairs or 32 MiB (or one oversized pair) are kept. A pair is
     /// only reused while it fits the drawable: the blit always fills the whole
@@ -1107,7 +1107,7 @@ impl MetalRenderer {
         (pair.scratch.clone(), pair.blurred.clone())
     }
 
-    // dbdelve patch: backdrop blur.
+    // vernier patch: backdrop blur.
     fn release_backdrop_resources(&mut self) {
         self.backdrop_textures.clear();
         self.backdrop_kernels.clear();
@@ -1120,7 +1120,7 @@ impl MetalRenderer {
         }
     }
 
-    /// dbdelve patch: the cached `MPSImageGaussianBlur` for `sigma` (device
+    /// vernier patch: the cached `MPSImageGaussianBlur` for `sigma` (device
     /// pixels), from an LRU of four: a popover and a menu open together blur
     /// with different radii in the same frame.
     fn ensure_gaussian_kernel(&mut self, sigma: f32) -> Retained<AnyObject> {
@@ -1720,7 +1720,7 @@ fn build_pipeline_state(
     color_attachment.set_source_rgb_blend_factor(metal::MTLBlendFactor::SourceAlpha);
     color_attachment.set_source_alpha_blend_factor(metal::MTLBlendFactor::One);
     color_attachment.set_destination_rgb_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
-    // dbdelve patch: upstream adds the destination alpha (factor One), so on a
+    // vernier patch: upstream adds the destination alpha (factor One), so on a
     // transparent window every translucent layer over another overstates the
     // coverage it hands the compositor and darkens the desktop showing through.
     // OneMinusSourceAlpha is the `over` operator the colour channels already use.
@@ -1731,7 +1731,7 @@ fn build_pipeline_state(
         .expect("could not create render pipeline state")
 }
 
-// dbdelve patch: backdrop blur.
+// vernier patch: backdrop blur.
 fn build_pipeline_state_no_blend(
     device: &metal::DeviceRef,
     library: &metal::LibraryRef,
@@ -1787,7 +1787,7 @@ fn build_path_sprite_pipeline_state(
     color_attachment.set_source_rgb_blend_factor(metal::MTLBlendFactor::One);
     color_attachment.set_source_alpha_blend_factor(metal::MTLBlendFactor::One);
     color_attachment.set_destination_rgb_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
-    // dbdelve patch: see `build_pipeline_state`.
+    // vernier patch: see `build_pipeline_state`.
     color_attachment.set_destination_alpha_blend_factor(metal::MTLBlendFactor::OneMinusSourceAlpha);
 
     device
@@ -1847,7 +1847,7 @@ struct InstanceBindings {
     monochrome_sprites: InstanceBinding,
     polychrome_sprites: InstanceBinding,
     surfaces: InstanceBinding,
-    // dbdelve patch: backdrop blur.
+    // vernier patch: backdrop blur.
     backdrop_blurs: InstanceBinding,
 }
 
@@ -1862,7 +1862,7 @@ fn write_instances(scene: &Scene, writer: &mut InstanceBufferWriter) -> Result<I
             bounds: surface.bounds,
             content_mask: surface.content_mask,
         }))?,
-        // dbdelve patch: backdrop blur.
+        // vernier patch: backdrop blur.
         backdrop_blurs: writer.write(&scene.backdrop_blurs)?,
     })
 }
@@ -2038,7 +2038,7 @@ enum SurfaceInputIndex {
     CbCrTexture = 5,
 }
 
-// dbdelve patch: backdrop blur.
+// vernier patch: backdrop blur.
 #[repr(C)]
 enum BackdropBlurInputIndex {
     Vertices = 0,
@@ -2178,7 +2178,7 @@ mod tests {
     }
 }
 
-// dbdelve patch: backdrop-blur rendering tests, ported from zui.
+// vernier patch: backdrop-blur rendering tests, ported from zui.
 #[cfg(test)]
 mod backdrop_blur_tests {
     use super::*;

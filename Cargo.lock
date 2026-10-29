@@ -2090,7 +2090,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c286de4e81ea2590afc24d754e0f83810c566f50a1388fa75ebd57928c0d9745"
 
 [[package]]
-name = "dbdelve"
+name = "vernier"
 version = "0.6.0"
 dependencies = [
  "aes 0.8.4",

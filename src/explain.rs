@@ -679,9 +679,9 @@ mod tests {
 
     #[test]
     fn a_find_with_execution_stats_nests_by_input_stage_and_carries_its_counts() {
-        // dbdelve_dev, MongoDB 8.2: find({_id: {$gt: 0}}).sort({_id: 1}).limit(3)
+        // vernier_dev, MongoDB 8.2: find({_id: {$gt: 0}}).sort({_id: 1}).limit(3)
         let plan = explain_reply(
-            r#"{"explainVersion":"1","queryPlanner":{"namespace":"dbdelve_dev.wide_metrics","winningPlan":{"stage":"LIMIT","limitAmount":3,"inputStage":{"stage":"FETCH","inputStage":{"stage":"IXSCAN","keyPattern":{"_id":1},"indexName":"_id_","direction":"forward"}}},"rejectedPlans":[]},"executionStats":{"executionSuccess":true,"nReturned":3,"executionTimeMillis":4,"totalKeysExamined":3,"totalDocsExamined":3,"executionStages":{"stage":"LIMIT","nReturned":3,"executionTimeMillisEstimate":4,"works":4,"limitAmount":3,"inputStage":{"stage":"FETCH","nReturned":3,"executionTimeMillisEstimate":3,"docsExamined":3,"inputStage":{"stage":"IXSCAN","nReturned":3,"executionTimeMillisEstimate":1,"indexName":"_id_","keysExamined":3,"direction":"forward"}}}},"ok":1}"#,
+            r#"{"explainVersion":"1","queryPlanner":{"namespace":"vernier_dev.wide_metrics","winningPlan":{"stage":"LIMIT","limitAmount":3,"inputStage":{"stage":"FETCH","inputStage":{"stage":"IXSCAN","keyPattern":{"_id":1},"indexName":"_id_","direction":"forward"}}},"rejectedPlans":[]},"executionStats":{"executionSuccess":true,"nReturned":3,"executionTimeMillis":4,"totalKeysExamined":3,"totalDocsExamined":3,"executionStages":{"stage":"LIMIT","nReturned":3,"executionTimeMillisEstimate":4,"works":4,"limitAmount":3,"inputStage":{"stage":"FETCH","nReturned":3,"executionTimeMillisEstimate":3,"docsExamined":3,"inputStage":{"stage":"IXSCAN","nReturned":3,"executionTimeMillisEstimate":1,"indexName":"_id_","keysExamined":3,"direction":"forward"}}}},"ok":1}"#,
         );
 
         let shape: Vec<(usize, &str)> = plan

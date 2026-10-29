@@ -81,8 +81,8 @@ maria MariaDb(
         port: Some(
             3307,
         ),
-        database: "dbdelve_dev",
-        user: "dbdelve",
+        database: "vernier_dev",
+        user: "vernier",
         password: "",
         sslmode: Prefer,
         root_certificate: None,
@@ -132,7 +132,7 @@ mssql SqlServer(
         port: Some(
             1433,
         ),
-        database: "dbdelve_dev",
+        database: "vernier_dev",
         user: "sa",
         password: "",
         sslmode: VerifyCa,

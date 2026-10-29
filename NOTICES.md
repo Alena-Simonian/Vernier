@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-DBDelve redistributes the following third-party font families, embedded within the binary through the `guic-gpui-assets` crate and registered at startup, and the theme files below.
+Vernier redistributes the following third-party font families, embedded within the binary through the `guic-gpui-assets` crate and registered at startup, and the theme files below.
 
 ## IBM Plex Sans
 

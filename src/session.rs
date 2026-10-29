@@ -1630,7 +1630,7 @@ fn give_slot_back<G: PartialEq>(
 
 /// `QueryTab::apply_refresh`: on a queue's earlier result, that result read
 /// again in its own place; otherwise the statement behind the slot. `None`
-/// where dbdelve cannot say which statement produced the rows, as for a
+/// where vernier cannot say which statement produced the rows, as for a
 /// batch's set after its first, which has none of its own to ask again.
 fn apply_refresh<G: Clone + PartialEq>(
     queue: Option<&Queue<G>>,
@@ -2125,13 +2125,13 @@ pub(crate) enum ObjectBody {
     ///
     /// No editor. A generated `SELECT` shown above the grid read as a query the
     /// user had written and invited edits to a buffer that then stopped being a
-    /// view of the relation at all. The SQL dbdelve runs here is its own, and the
+    /// view of the relation at all. The SQL vernier runs here is its own, and the
     /// only thing the user changes about it is the sort.
     Relation {
         structure: StructureState,
         results: Entity<TableState<ResultGrid>>,
         query: QueryState,
-        /// The `ORDER BY` the header clicks have built up. dbdelve owns this
+        /// The `ORDER BY` the header clicks have built up. vernier owns this
         /// statement, so sorting regenerates it rather than editing text.
         sort: Vec<SortKey>,
         /// Who orders these rows on a header click. A sort in memory orders
@@ -2317,7 +2317,7 @@ pub(crate) enum Refresh {
     /// own grid, so the last result is never blanked for it.
     Earlier { index: usize, sql: String },
     /// `Earlier`'s re-read, which gives the slot back once it lands. That run
-    /// is the user's statement and not dbdelve's, so it keeps the row limit.
+    /// is the user's statement and not vernier's, so it keeps the row limit.
     Return,
     /// A relation tab, refreshed the way its own controls refresh it — so it
     /// picks up whatever sort and row limit the tab is now set to.
@@ -2368,7 +2368,7 @@ pub(crate) enum QueryState {
 
 /// The stored tabs, each naming a query whose file has gone turned into the
 /// unsaved buffer it now is, rather than a tab pointing at nothing: a file
-/// removed outside DBDelve, since deleting one inside it closes its tab.
+/// removed outside Vernier, since deleting one inside it closes its tab.
 fn unsaved_where_gone(
     stored: Vec<store::StoredQueryTab>,
     saved_queries: &[String],
@@ -3079,7 +3079,7 @@ mod tests {
         assert!(restored_state(&older).messages().is_empty());
 
         let said = store::StoredGrid {
-            messages: vec!["Changed database context to 'dbdelve_dev'.".into()],
+            messages: vec!["Changed database context to 'vernier_dev'.".into()],
             ..older
         };
         let read: store::StoredGrid =

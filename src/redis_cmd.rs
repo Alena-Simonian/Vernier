@@ -1,9 +1,9 @@
-//! Redis commands, read by DBDelve: the Redis counterpart of `sql.rs` and
+//! Redis commands, read by Vernier: the Redis counterpart of `sql.rs` and
 //! `mql.rs`.
 //!
 //! A buffer holds one command per line, split into words by redis-cli's own
 //! rules (`sdssplitargs`), so a line pasted from redis-cli means here what it
-//! meant there. A line whose first character is `#` is a comment, DBDelve's
+//! meant there. A line whose first character is `#` is a comment, Vernier's
 //! addition; redis-cli would send it.
 //!
 //! Classifying a command is a lookup by its name (and subcommand, where the
@@ -18,7 +18,7 @@ use crate::sql::{Destructive, Leaves, Mode, Verdict};
 pub(crate) mod browse;
 pub(crate) mod edit;
 
-/// One command of a buffer, as DBDelve reads it.
+/// One command of a buffer, as Vernier reads it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Command {
     /// The line it was read from, trimmed, as a byte range of the text.
@@ -254,7 +254,7 @@ fn escaped(bytes: &[u8], ascii: bool) -> String {
 }
 
 /// Why `command` is not sent, for the ones that would take the session
-/// DBDelve owns out from under it.
+/// Vernier owns out from under it.
 fn refusal(command: &Command) -> Option<String> {
     let name = command.name();
     let why = match name.as_str() {
@@ -263,11 +263,11 @@ fn refusal(command: &Command) -> Option<String> {
         | "SUNSUBSCRIBE" | "MONITOR" | "SYNC" | "PSYNC" => {
             "it turns the session into a stream of messages with no end, which no result can hold"
         }
-        "HELLO" | "RESET" | "QUIT" => "it resets or ends the session DBDelve holds open",
+        "HELLO" | "RESET" | "QUIT" => "it resets or ends the session Vernier holds open",
         "CLIENT" if command.subcommand() == "REPLY" => {
             return Some(
                 "CLIENT REPLY is not sent from the editor: it stops the server answering, and \
-                 DBDelve waits on every answer."
+                 Vernier waits on every answer."
                     .into(),
             );
         }
@@ -281,7 +281,7 @@ fn refusal(command: &Command) -> Option<String> {
 enum Kind {
     Read,
     Write,
-    /// Runs a script whose body DBDelve cannot read, which may do anything a
+    /// Runs a script whose body Vernier cannot read, which may do anything a
     /// `Drop` does.
     Script,
     /// Throws data or the server's state away wholesale.
@@ -821,7 +821,7 @@ const WRITES: &[&str] = &[
     "VSETATTR",
 ];
 
-/// Commands that run a script, whose `redis.call`s are DBDelve's to guess at:
+/// Commands that run a script, whose `redis.call`s are Vernier's to guess at:
 /// `EVAL "return redis.call('flushall')" 0` is a `FLUSHALL`. Their `_RO`
 /// forms, which the server holds to reads, are in `READS`.
 const SCRIPTS: &[&str] = &["EVAL", "EVALSHA", "FCALL"];

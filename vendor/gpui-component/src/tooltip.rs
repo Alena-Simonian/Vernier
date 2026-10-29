@@ -122,7 +122,7 @@ impl Render for Tooltip {
                 .bg(cx.theme().tokens.popover)
                 .border_1()
                 .border_color(cx.theme().border)
-                // dbdelve patch: frosted like every other popup, and for the same
+                // vernier patch: frosted like every other popup, and for the same
                 // reason without the shadow (see `popover_style`).
                 .map(|this| {
                     if popover_frosted(cx) {
@@ -193,7 +193,7 @@ pub(crate) fn render_tooltip(
         BaseTooltipTransition::Enter { epoch } => EffectTransition::new(ENTER_DURATION)
             .ease(ease_out_cubic)
             .slide_y(px(4.), px(0.))
-            // dbdelve patch: no fade on frost. The blur ignores opacity and sits
+            // vernier patch: no fade on frost. The blur ignores opacity and sits
             // inside the tooltip's own view, out of this transition's reach, so
             // a fade would bring the frost in at full strength under a tint
             // that is still arriving.

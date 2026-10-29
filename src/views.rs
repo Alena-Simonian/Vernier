@@ -222,7 +222,7 @@ fn render_editor_surface(
                 // The builder replaces the built-in menu rather than extending
                 // it, so the edit items are restated to keep them. Gone with the
                 // default are Go to Definition and Show Code Actions, which this
-                // editor drew permanently greyed -- dbdelve registers neither
+                // editor drew permanently greyed -- vernier registers neither
                 // provider, and no language server is coming.
                 .context_menu(|menu, _, cx| {
                     menu.menu("Cut", Box::new(input::Cut))
@@ -611,7 +611,7 @@ fn render_plan(
                 .gap(px(2.))
                 // A server that answered with nothing a plan could be read out
                 // of still said something, and its own words are better than
-                // dbdelve's guess at what it meant.
+                // vernier's guess at what it meant.
                 .when(plan.nodes.is_empty(), |body| {
                     body.child(
                         div()
@@ -864,7 +864,7 @@ fn render_filter_bar(
                             .text_color(t.text_faint),
                     )
                     // The grid's own column names, because the preview is
-                    // dbdelve's `SELECT *` and a header is the server's word for
+                    // vernier's `SELECT *` and a header is the server's word for
                     // the column rather than an alias.
                     .dropdown_menu({
                         let names = names.clone();
@@ -1322,7 +1322,7 @@ fn render_results(
             .child(line)
             .into_any_element()
     };
-    // The default `Loader` icon names a file dbdelve's asset source does not
+    // The default `Loader` icon names a file vernier's asset source does not
     // serve, so the spinner has to be pointed at the one it does.
     let spinner = || {
         Spinner::new()
@@ -1931,7 +1931,7 @@ fn render_messages(
 /// has room for a value the column had to clip, which is what makes this
 /// the value inspector the spec asks for in §4.4.
 ///
-/// Nothing here is state of dbdelve's own: the selected row belongs to the
+/// Nothing here is state of vernier's own: the selected row belongs to the
 /// grid, so the panel cannot disagree with the highlight in the grid, and
 /// arrow keys move both.
 fn render_row_inspector(
@@ -2258,7 +2258,7 @@ fn render_row_inspector(
                                             .child(field.name),
                                     )
                                     // Absent rather than guessed: a type
-                                    // dbdelve could not learn is not shown as
+                                    // vernier could not learn is not shown as
                                     // one it inferred from the text.
                                     .child(
                                         div()

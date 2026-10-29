@@ -266,17 +266,17 @@ pub(crate) fn update_pill(t: Theme, version: &str) -> Button {
                 .gap(px(layout::SPACE_XS))
                 .text_size(px(layout::chrome(layout::TEXT_XS)))
                 .text_color(t.text_muted)
-                .child(format!("DBDelve {version} available"))
+                .child(format!("Vernier {version} available"))
                 .child(row_icon(t, icon::CHEVRON_DOWN)),
         )
 }
 
 /// macOS draws its window buttons over a transparent titlebar, and Windows
-/// draws none at all into one, so both leave the strip to dbdelve. Linux has no
+/// draws none at all into one, so both leave the strip to vernier. Linux has no
 /// compositor that will draw buttons into it, so it keeps the system bar.
 pub(crate) const CLIENT_TITLEBAR: bool = !cfg!(target_os = "linux");
 
-/// dbdelve's own titlebar, drawn where the platform's would be.
+/// vernier's own titlebar, drawn where the platform's would be.
 ///
 /// On macOS and Windows the system titlebar is transparent (see `main`), so
 /// this row is what runs to the top of the window. It is also the drag handle
@@ -465,7 +465,7 @@ pub(crate) fn search_field(
         )
 }
 
-/// What a button's fill says. Colour is state here as everywhere else: a dbdelve
+/// What a button's fill says. Colour is state here as everywhere else: a vernier
 /// button is the neutral control tone unless it is the one action its surface
 /// exists to take, or the one that destroys something.
 #[derive(Clone, Copy, PartialEq)]
@@ -521,12 +521,12 @@ impl Control {
     }
 }
 
-/// A dbdelve button.
+/// A vernier button.
 ///
 /// gpui-component supplies the mechanism — the tooltip and the keybinding in
 /// it, the focus ring, the disabled gate — and none of the appearance survives
 /// contact with it. Its size scale bottoms out at a 20px box with 4px of
-/// padding, its label comes out at the library's 16px body rather than dbdelve's
+/// padding, its label comes out at the library's 16px body rather than vernier's
 /// 13, and 0.5.1 tints button content `red_400` on hover from a hardcoded
 /// colour no theme token reaches.
 ///
@@ -712,7 +712,7 @@ fn option_text(title: impl IntoElement, description: Option<SharedString>, t: Th
 }
 
 /// An on/off choice. Drawn here rather than taken from gpui-component, whose
-/// switch springs its thumb across: nothing in DBDelve moves on a click (see
+/// switch springs its thumb across: nothing in Vernier moves on a click (see
 /// docs/agents/ui.md, "Animation"). A button underneath, so Tab reaches it and Space
 /// or Enter flips it.
 pub(crate) fn switch(id: impl Into<gpui::ElementId>, on: bool, t: Theme) -> Button {
@@ -1241,12 +1241,12 @@ mod tests {
     #[test]
     fn a_multi_line_error_reads_from_its_start() {
         // The shape `postgres::describe` builds: message, DETAIL, HINT.
-        let error = "role \"dbdelve\" is not permitted to log in\n\
+        let error = "role \"vernier\" is not permitted to log in\n\
                      Role has no LOGIN attribute.\n\
                      Grant it with ALTER ROLE.";
         assert_eq!(
             one_line(error),
-            "role \"dbdelve\" is not permitted to log in Role has no LOGIN attribute. \
+            "role \"vernier\" is not permitted to log in Role has no LOGIN attribute. \
              Grant it with ALTER ROLE."
         );
         assert_eq!(one_line("one\r\n\r\n  two  "), "one two");

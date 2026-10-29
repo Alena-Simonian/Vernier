@@ -2885,7 +2885,7 @@ fn command_items(workspace: &Workspace, profile: &Profile, cx: &App) -> Vec<Item
                     ROWS,
                 ));
             }
-            // Only on a row dbdelve can name by its primary key -- the same
+            // Only on a row vernier can name by its primary key -- the same
             // condition that makes a cell of it editable.
             if workspace.has_nameable_row(cx) {
                 items.push(command(

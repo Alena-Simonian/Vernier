@@ -1,13 +1,13 @@
-# SQL DBDelve writes, and the gates it passes
+# SQL Vernier writes, and the gates it passes
 
-## The row limit and what DBDelve writes
+## The row limit and what Vernier writes
 
 **Never rewrite SQL behind the user's back.** No silent `LIMIT` injection, no
 column projection, no reformatting on execute, and nothing at all on a
-statement the user did not ask DBDelve to change. A client that silently
+statement the user did not ask Vernier to change. A client that silently
 alters statements cannot be trusted with the statements that matter, which
 is why "silently" is the word that carries the rule. A `LIMIT` is written
-only into DBDelve-generated preview queries. A user's own statement runs
+only into Vernier-generated preview queries. A user's own statement runs
 as typed; the row limit bounds it by keeping only that many rows and
 dropping the rest as they arrive, never by changing the statement. A
 read is stopped once it passes the limit instead of being drained only when
@@ -27,7 +27,7 @@ sends `SET ROWCOUNT limit+1` as a batch of its own ahead of it and always
 Anything else is drained. Either way the limit is visible in the UI, and a capped
 result says how many rows the statement returned, or that it was stopped.
 
-DBDelve _does_ write SQL when the user asks it to, and only then, always
+Vernier _does_ write SQL when the user asks it to, and only then, always
 where the user can read it:
 
 - On a view the server sorts, a header click asking for a sort splices the
@@ -50,7 +50,7 @@ where the user can read it:
   result reads back as the same statements). Never an AST round-trip: that
   regenerates the statement and drops every comment the user wrote.
 
-Limits on what DBDelve may write. It never writes `DROP` or `TRUNCATE`
+Limits on what Vernier may write. It never writes `DROP` or `TRUNCATE`
 into a buffer or onto the wire, whatever the user asked for. It writes
 `DELETE` only as the explicit deletion of one named row: by primary key (on
 an engine without unique keys, by all of the row's values as read, and only
@@ -103,7 +103,7 @@ after an odd run of backslashes is refused, in every arm
 does not.
 
 `sql::is_generated_select` guards the filter bar, the one place user text is
-spliced into DBDelve's statement: exactly one query, nothing destructive
+spliced into Vernier's statement: exactly one query, nothing destructive
 under it, no delete at all. It admits no write and is not a way around
 `sql::is_generated_write`. Do not add a path that bypasses either.
 
@@ -139,7 +139,7 @@ subcommand from the `READS`, `WRITES` and `DROPS` tables, and a name in none
 is `Unreadable`. The server has no read-only hold (`holds_read_only` is
 false), so the tables are the Read-only boundary and must stay closed to
 anything unlisted. `redis_cmd::refusal` is a separate list: the commands
-that would take the session out from under DBDelve (`SELECT`, the
+that would take the session out from under Vernier (`SELECT`, the
 subscribe family, `MONITOR`, `SYNC`, `HELLO`, `RESET`, `QUIT`,
 `CLIENT REPLY`) are never sent, in any mode.
 
@@ -154,7 +154,7 @@ not a second gate: it admits nothing, and a caller runs both.
 `BEGIN`/`COMMIT` bracketing multi-row edits already use: one `DELETE` per
 row, each naming its own key, never one predicate covering several.
 
-A cell is editable only when DBDelve can name its row by primary key; when
+A cell is editable only when Vernier can name its row by primary key; when
 it cannot, the grid stays read-only and says why, and never guesses at a
 predicate. An `INSERT` has no existing row to name, so a table without a
 primary key can be inserted into and not edited. That asymmetry is

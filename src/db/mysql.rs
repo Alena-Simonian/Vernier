@@ -290,12 +290,12 @@ fn assemble_indexes(result: &QueryResult) -> Result<Vec<Index>, DbError> {
     Ok(indexes)
 }
 
-/// A `mysql://` URL, read by dbdelve rather than by the driver.
+/// A `mysql://` URL, read by vernier rather than by the driver.
 ///
 /// The driver has its own URL parser with a fixed key list, and it would refuse
 /// the whole string over an `sslmode` it does not know — naming neither the
 /// option nor the reason, which is the same trap the Postgres side documents.
-/// dbdelve owns both TLS keys and builds the driver's options from fields.
+/// vernier owns both TLS keys and builds the driver's options from fields.
 pub fn config_from_url(url: &str) -> Result<ServerConfig, String> {
     super::server_from_url(url, "MySQL")
 }
@@ -485,7 +485,7 @@ impl Connection {
         self.run(sql, true, fetch)
     }
 
-    /// dbdelve's own SQL. Its rows are never editable, so it does not pay for the
+    /// vernier's own SQL. Its rows are never editable, so it does not pay for the
     /// round trip that reads a primary key.
     fn internal_query(&self, sql: &str) -> Result<QueryResult, DbError> {
         self.run(sql, false, Fetch::default())
@@ -1005,7 +1005,7 @@ fn column_of(result: &QueryResult, column: &str) -> Result<Vec<String>, DbError>
         .collect()
 }
 
-/// dbdelve's five rungs as the driver's options.
+/// vernier's five rungs as the driver's options.
 ///
 /// The driver verifies certificates itself, so `tls::connector`'s verifiers are
 /// not reusable here — see the multi-engine spec, section 4.3, for the trust
@@ -1097,7 +1097,7 @@ fn warnings(connection: &mut Conn) -> Vec<String> {
 /// End the transaction a failed batch left open, and say so in the error.
 ///
 /// MySQL stops a multi-statement submission at the failing statement, so the
-/// `COMMIT` dbdelve wrote into the text never runs and the transaction stays open
+/// `COMMIT` vernier wrote into the text never runs and the transaction stays open
 /// on a connection that outlives it — the refresh that follows would read the
 /// uncommitted rows back as though the apply had succeeded, and every statement
 /// after it would join a transaction nobody closes.
@@ -1105,7 +1105,7 @@ fn warnings(connection: &mut Conn) -> Vec<String> {
 /// Only a transaction *this* submission opened is rolled back, so one the user
 /// began in an earlier run is theirs to finish. Unlike SQLite, MySQL cannot be
 /// asked: the driver keeps the server's `SERVER_STATUS_IN_TRANS` flag private,
-/// so the submitted text is what there is to read, and it is the text dbdelve
+/// so the submitted text is what there is to read, and it is the text vernier
 /// wrote or the user can see.
 fn rolled_back(connection: &mut Conn, sql: &str, error: DbError) -> DbError {
     let Some(start) = Engine::MySql.transaction_start() else {
@@ -1148,12 +1148,12 @@ mod tests {
     use super::*;
     use crate::db::{ColumnDefinition, ForeignKey, IndexKind, RelationKind, RoutineKind};
 
-    /// The server the `live_` tests talk to, from `dbdelve_MYSQL_URL` or
-    /// `dbdelve_MARIADB_URL`.
+    /// The server the `live_` tests talk to, from `vernier_MYSQL_URL` or
+    /// `vernier_MARIADB_URL`.
     fn live_config(engine: Engine) -> ServerConfig {
         let variable = match engine {
-            Engine::MariaDb => "dbdelve_MARIADB_URL",
-            _ => "dbdelve_MYSQL_URL",
+            Engine::MariaDb => "vernier_MARIADB_URL",
+            _ => "vernier_MYSQL_URL",
         };
         let url = std::env::var(variable).unwrap_or_else(|_| panic!("{variable} is required"));
         config_from_url(&url).unwrap_or_else(|_| panic!("{variable} should parse"))
@@ -1175,13 +1175,13 @@ mod tests {
     /// The compose database as the bastion sees it, by service name and the
     /// port inside the network.
     fn live_tunnelled() -> ServerConfig {
-        let url = std::env::var("dbdelve_MYSQL_URL").expect("dbdelve_MYSQL_URL is required");
+        let url = std::env::var("vernier_MYSQL_URL").expect("vernier_MYSQL_URL is required");
         ServerConfig {
             host: "mysql".into(),
             port: Some(3306),
             sslmode: SslMode::Disable,
-            ssh: crate::db::ssh::live_bastion("dbdelve-bastion"),
-            ..config_from_url(&url).expect("dbdelve_MYSQL_URL should parse")
+            ssh: crate::db::ssh::live_bastion("vernier-bastion"),
+            ..config_from_url(&url).expect("vernier_MYSQL_URL should parse")
         }
     }
 
@@ -1207,7 +1207,7 @@ mod tests {
             .map(|(table, column)| ProbedColumn {
                 name: column.unwrap_or("?").to_string(),
                 type_name: "int".to_string(),
-                schema: table.map(|_| "dbdelve_dev".to_string()),
+                schema: table.map(|_| "vernier_dev".to_string()),
                 table: table.map(str::to_string),
                 column: column.map(str::to_string),
                 binary: false,
@@ -1218,7 +1218,7 @@ mod tests {
     #[test]
     fn a_url_fills_the_fields_without_inventing_a_port() {
         let config =
-            config_from_url("mysql://person%40example.com:pa%20ss@db.example.test/dbdelve_test")
+            config_from_url("mysql://person%40example.com:pa%20ss@db.example.test/vernier_test")
                 .unwrap();
 
         assert_eq!(
@@ -1226,7 +1226,7 @@ mod tests {
             ServerConfig {
                 host: "db.example.test".into(),
                 port: None,
-                database: "dbdelve_test".into(),
+                database: "vernier_test".into(),
                 // Cloud IAM usernames are email addresses, and a password may
                 // contain anything a URL can encode.
                 user: "person@example.com".into(),
@@ -1239,7 +1239,7 @@ mod tests {
             }
         );
         assert_eq!(
-            config_from_url("mysql://someone@db.example.test:3307/dbdelve_test")
+            config_from_url("mysql://someone@db.example.test:3307/vernier_test")
                 .unwrap()
                 .port,
             Some(3307)
@@ -1247,9 +1247,9 @@ mod tests {
     }
 
     #[test]
-    fn a_url_carries_the_two_keys_dbdelve_owns() {
+    fn a_url_carries_the_two_keys_vernier_owns() {
         let config = config_from_url(
-            "mysql://someone@db.example.test/dbdelve_test\
+            "mysql://someone@db.example.test/vernier_test\
              ?sslmode=verify-full&sslrootcert=/tmp/rds.pem",
         )
         .unwrap();
@@ -1261,13 +1261,13 @@ mod tests {
     #[test]
     fn a_url_missing_a_part_or_carrying_an_unknown_one_says_which() {
         for (url, expected) in [
-            ("mysql://db.example.test/dbdelve_test", "username"),
+            ("mysql://db.example.test/vernier_test", "username"),
             (
-                "mysql://someone@db.example.test/dbdelve_test?charset=utf8",
+                "mysql://someone@db.example.test/vernier_test?charset=utf8",
                 "charset",
             ),
             (
-                "mysql://someone@db.example.test/dbdelve_test?sslmode=allow",
+                "mysql://someone@db.example.test/vernier_test?sslmode=allow",
                 "allow",
             ),
         ] {
@@ -1314,7 +1314,7 @@ mod tests {
     fn sole_table_needs_one_table_and_at_least_one() {
         assert_eq!(
             sole_table(&probed(&[(Some("accounts"), Some("id")), (None, None)])),
-            Some(("dbdelve_dev".into(), "accounts".into()))
+            Some(("vernier_dev".into(), "accounts".into()))
         );
         assert_eq!(
             sole_table(&probed(&[
@@ -1337,13 +1337,13 @@ mod tests {
                 (None, None),
                 (Some("accounts"), Some("name")),
             ]),
-            "dbdelve_dev",
+            "vernier_dev",
             "accounts",
             &["id".to_string()],
         )
         .expect("one table with its key present is editable");
 
-        assert_eq!(target.schema, "dbdelve_dev");
+        assert_eq!(target.schema, "vernier_dev");
         assert_eq!(
             target.columns,
             vec![Some("id".to_string()), None, Some("name".to_string())]
@@ -1363,7 +1363,7 @@ mod tests {
                     (Some("accounts"), Some("name")),
                     (Some("accounts"), Some("name")),
                 ]),
-                "dbdelve_dev",
+                "vernier_dev",
                 "accounts",
                 &["id".to_string()],
             ),
@@ -1378,7 +1378,7 @@ mod tests {
         assert_eq!(
             resolve_edit_target(
                 &probed(&[(Some("t"), Some("left_id")), (Some("t"), Some("label"))]),
-                "dbdelve_dev",
+                "vernier_dev",
                 "t",
                 &["left_id".to_string(), "right_id".to_string()],
             ),
@@ -1387,7 +1387,7 @@ mod tests {
         assert_eq!(
             resolve_edit_target(
                 &probed(&[(Some("t"), Some("label"))]),
-                "dbdelve_dev",
+                "vernier_dev",
                 "t",
                 &[],
             ),
@@ -1414,7 +1414,7 @@ mod tests {
             sslmode: SslMode::VerifyFull,
             // Nothing that resolves: starting ssh at all would fail differently.
             ssh: Some(crate::db::SshTunnel {
-                host: "dbdelve-nowhere.invalid".into(),
+                host: "vernier-nowhere.invalid".into(),
                 ..crate::db::SshTunnel::default()
             }),
             ..ServerConfig::default()
@@ -1453,10 +1453,10 @@ mod tests {
         assert_eq!(
             structure_sql(
                 "WHERE TABLE_SCHEMA = {schema} AND TABLE_NAME = {relation}",
-                "dbdelve_dev",
+                "vernier_dev",
                 "odd'name",
             ),
-            "WHERE TABLE_SCHEMA = 'dbdelve_dev' AND TABLE_NAME = 'odd''name'"
+            "WHERE TABLE_SCHEMA = 'vernier_dev' AND TABLE_NAME = 'odd''name'"
         );
     }
 
@@ -1478,7 +1478,7 @@ mod tests {
         "SELECT MAX(SHA2(CONCAT(a.id, b.id), 512)) FROM measurements a JOIN measurements b";
 
     #[test]
-    #[ignore = "requires the dev bastions and MySQL configured through dbdelve_SSH_CONFIG and dbdelve_MYSQL_URL"]
+    #[ignore = "requires the dev bastions and MySQL configured through vernier_SSH_CONFIG and vernier_MYSQL_URL"]
     fn live_ssh_a_query_and_a_cancel_run_through_the_bastion() {
         let connection =
             Connection::open(&live_tunnelled(), Engine::MySql).expect("connection should open");
@@ -1494,7 +1494,7 @@ mod tests {
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(500));
             assert!(
-                canceller.sizes().expect("sizes should load")["dbdelve_dev"]
+                canceller.sizes().expect("sizes should load")["vernier_dev"]
                     .contains_key("accounts")
             );
             canceller.cancel().expect("the KILL QUERY should send");
@@ -1656,9 +1656,9 @@ mod tests {
     fn live_the_databases_list_flags_the_one_connected_to(engine: Engine) {
         let databases = live(engine).databases().expect("databases should list");
 
-        assert!(databases.names.contains(&"dbdelve_dev".to_string()));
+        assert!(databases.names.contains(&"vernier_dev".to_string()));
         assert!(databases.names.contains(&"information_schema".to_string()));
-        assert_eq!(databases.current.as_deref(), Some("dbdelve_dev"));
+        assert_eq!(databases.current.as_deref(), Some("vernier_dev"));
     }
 
     fn live_a_blank_database_connects_to_none(engine: Engine) {
@@ -1675,7 +1675,7 @@ mod tests {
         .expect("databases should list");
 
         assert_eq!(databases.current, None);
-        assert!(databases.names.contains(&"dbdelve_dev".to_string()));
+        assert!(databases.names.contains(&"vernier_dev".to_string()));
     }
 
     fn live_query_round_trip(engine: Engine) {
@@ -1747,8 +1747,8 @@ mod tests {
         let schema = catalog
             .schemas
             .iter()
-            .find(|schema| schema.name == "dbdelve_dev")
-            .expect("dbdelve_dev should exist");
+            .find(|schema| schema.name == "vernier_dev")
+            .expect("vernier_dev should exist");
 
         assert!(
             schema
@@ -1782,14 +1782,14 @@ mod tests {
         );
 
         let sizes = connection.sizes().expect("sizes should load");
-        assert!(sizes["dbdelve_dev"].contains_key("accounts"));
-        assert!(!sizes["dbdelve_dev"].contains_key("account_overview"));
+        assert!(sizes["vernier_dev"].contains_key("accounts"));
+        assert!(!sizes["vernier_dev"].contains_key("account_overview"));
         catalog.set_sizes(&sizes);
         assert!(
             catalog
                 .schemas
                 .iter()
-                .filter(|schema| schema.name == "dbdelve_dev")
+                .filter(|schema| schema.name == "vernier_dev")
                 .flat_map(|schema| &schema.relations)
                 .any(|relation| relation.name == "accounts" && relation.size.is_some())
         );
@@ -1797,7 +1797,7 @@ mod tests {
 
     fn live_structure_round_trip(engine: Engine) {
         let structure = live(engine)
-            .structure("dbdelve_dev", "accounts")
+            .structure("vernier_dev", "accounts")
             .expect("structure should load");
 
         assert!(
@@ -1855,16 +1855,16 @@ mod tests {
         connection
             .query(
                 &format!(
-                    "DROP TABLE IF EXISTS dbdelve_test_indexes; \
-                     CREATE TABLE dbdelve_test_indexes (id INT, email VARCHAR(80), \
+                    "DROP TABLE IF EXISTS vernier_test_indexes; \
+                     CREATE TABLE vernier_test_indexes (id INT, email VARCHAR(80), \
                          UNIQUE KEY by_email (email(10), id){functional})"
                 ),
                 Fetch::default(),
             )
             .expect("the fixture table should be created");
-        let fixture = connection.structure("dbdelve_dev", "dbdelve_test_indexes");
+        let fixture = connection.structure("vernier_dev", "vernier_test_indexes");
         connection
-            .query("DROP TABLE dbdelve_test_indexes", Fetch::default())
+            .query("DROP TABLE vernier_test_indexes", Fetch::default())
             .expect("the fixture table should be cleaned up");
         let fixture = fixture.expect("structure should load");
         let by_email = &fixture.indexes[0];
@@ -1889,7 +1889,7 @@ mod tests {
             .edit
             .expect("accounts has a primary key");
 
-        assert_eq!(edit.schema, "dbdelve_dev");
+        assert_eq!(edit.schema, "vernier_dev");
         assert_eq!(edit.table, "accounts");
         assert_eq!(
             edit.columns,
@@ -1939,7 +1939,7 @@ mod tests {
 
     fn live_the_foreign_key_fixtures_are_seeded(engine: Engine) {
         // The foreign-key tests have nothing to read unless the reseed that
-        // added `orders`, `order_items` and the `dbdelve_archive` database has
+        // added `orders`, `order_items` and the `vernier_archive` database has
         // actually been applied.
         let connection = live(engine);
 
@@ -1953,7 +1953,7 @@ mod tests {
 
         let closed = connection
             .query(
-                "SELECT count(*) AS rows_seeded FROM dbdelve_archive.closed_accounts",
+                "SELECT count(*) AS rows_seeded FROM vernier_archive.closed_accounts",
                 Fetch::default(),
             )
             .expect("query should succeed");
@@ -1962,7 +1962,7 @@ mod tests {
 
     fn live_a_composite_foreign_key_arrives_as_one_key_per_column_in_key_order(engine: Engine) {
         let structure = live(engine)
-            .structure("dbdelve_dev", "order_items")
+            .structure("vernier_dev", "order_items")
             .expect("structure should load");
 
         assert_eq!(
@@ -1970,13 +1970,13 @@ mod tests {
             vec![
                 ForeignKey {
                     column: "order_account_id".into(),
-                    referenced_schema: "dbdelve_dev".into(),
+                    referenced_schema: "vernier_dev".into(),
                     referenced_table: "orders".into(),
                     referenced_column: "account_id".into(),
                 },
                 ForeignKey {
                     column: "order_number".into(),
-                    referenced_schema: "dbdelve_dev".into(),
+                    referenced_schema: "vernier_dev".into(),
                     referenced_table: "orders".into(),
                     referenced_column: "number".into(),
                 },
@@ -1986,14 +1986,14 @@ mod tests {
 
     fn live_a_foreign_key_across_databases_names_the_database_it_references(engine: Engine) {
         let structure = live(engine)
-            .structure("dbdelve_archive", "closed_accounts")
+            .structure("vernier_archive", "closed_accounts")
             .expect("structure should load");
 
         assert_eq!(
             structure.foreign_keys,
             vec![ForeignKey {
                 column: "account_id".into(),
-                referenced_schema: "dbdelve_dev".into(),
+                referenced_schema: "vernier_dev".into(),
                 referenced_table: "accounts".into(),
                 referenced_column: "id".into(),
             }]
@@ -2002,7 +2002,7 @@ mod tests {
 
     fn live_a_table_referencing_nothing_reports_no_foreign_keys(engine: Engine) {
         let structure = live(engine)
-            .structure("dbdelve_dev", "accounts")
+            .structure("vernier_dev", "accounts")
             .expect("structure should load");
 
         assert!(structure.foreign_keys.is_empty());
@@ -2010,7 +2010,7 @@ mod tests {
 
     fn live_the_rendered_foreign_key_ddl_survives_beside_the_structured_form(engine: Engine) {
         let structure = live(engine)
-            .structure("dbdelve_dev", "order_items")
+            .structure("vernier_dev", "order_items")
             .expect("structure should load");
 
         assert!(
@@ -2210,7 +2210,7 @@ mod tests {
                 use crate::db::Engine;
                 $(
                     #[test]
-                    #[ignore = "requires the repository development database configured through dbdelve_MYSQL_URL"]
+                    #[ignore = "requires the repository development database configured through vernier_MYSQL_URL"]
                     fn $name() {
                         super::$name(Engine::MySql)
                     }
@@ -2220,7 +2220,7 @@ mod tests {
                 use crate::db::Engine;
                 $(
                     #[test]
-                    #[ignore = "requires the repository development database configured through dbdelve_MARIADB_URL"]
+                    #[ignore = "requires the repository development database configured through vernier_MARIADB_URL"]
                     fn $name() {
                         super::$name(Engine::MariaDb)
                     }
@@ -2232,10 +2232,10 @@ mod tests {
     fn live_the_ddl_of_a_table_and_a_view_is_the_servers_own(engine: Engine) {
         let connection = live(engine);
         let table = connection
-            .ddl("dbdelve_dev", "accounts")
+            .ddl("vernier_dev", "accounts")
             .expect("the table's DDL should load");
         let view = connection
-            .ddl("dbdelve_dev", "account_overview")
+            .ddl("vernier_dev", "account_overview")
             .expect("the view's DDL should load");
 
         assert!(table.starts_with("CREATE TABLE `accounts` ("), "{table}");
@@ -2252,11 +2252,11 @@ mod tests {
         Subject {
             connection: live_profile(engine),
             engine,
-            schema: "dbdelve_dev",
+            schema: "vernier_dev",
             relation: "conformance",
             key: "id",
             columns: &COLUMNS,
-            read: sql_read(engine, "dbdelve_dev"),
+            read: sql_read(engine, "vernier_dev"),
             endless: LIVE_ENDLESS_SELECT,
             runaway: LIVE_SLOW_SELECT,
             read_only_refusal: "READ ONLY",
@@ -2273,7 +2273,7 @@ mod tests {
                     "varbinary",
                 ],
                 renders: &[],
-                find: Box::new(move |key| sql_find(engine, "dbdelve_dev", key)),
+                find: Box::new(move |key| sql_find(engine, "vernier_dev", key)),
             }),
             _guard: None,
         }
@@ -2289,7 +2289,7 @@ mod tests {
 
     crate::db::conformance::suite!(
         live_conformance_on_mysql,
-        "requires a local MySQL server configured through dbdelve_MYSQL_URL",
+        "requires a local MySQL server configured through vernier_MYSQL_URL",
         conformance_on_mysql:
         connects,
         query_round_trip,
@@ -2306,7 +2306,7 @@ mod tests {
 
     crate::db::conformance::suite!(
         live_conformance_on_mariadb,
-        "requires a local MariaDB server configured through dbdelve_MARIADB_URL",
+        "requires a local MariaDB server configured through vernier_MARIADB_URL",
         conformance_on_mariadb:
         connects,
         query_round_trip,

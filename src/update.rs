@@ -22,7 +22,7 @@ struct Latest {
 pub(crate) fn newer_release() -> Option<Release> {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(10)))
-        .user_agent(concat!("dbdelve/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("Vernier/", env!("CARGO_PKG_VERSION")))
         .build()
         .into();
     let latest: Latest = agent

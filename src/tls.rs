@@ -1,14 +1,14 @@
 //! TLS for the Postgres connection.
 //!
 //! The Rust driver ships no TLS of its own: `Client::connect` takes a connector
-//! as an argument, and the `NoTls` dbdelve passed until now is a real type whose
+//! as an argument, and the `NoTls` vernier passed until now is a real type whose
 //! whole behaviour is to refuse. That is why `sslmode` had to be rejected
 //! rather than honoured — see the note on [`SslMode::parse`] for what a
 //! connection string's `sslmode` actually buys you here.
 //!
 //! `rustls` rather than `native-tls`, because `rustls` and `rustls-native-certs`
 //! were already in the dependency graph through gpui, and the latter reads the
-//! platform trust store through `security-framework`, which dbdelve already
+//! platform trust store through `security-framework`, which vernier already
 //! depends on for the Keychain. The choice costs one adapter crate instead of a
 //! second TLS stack, and no OpenSSL on any platform.
 //!
@@ -37,7 +37,7 @@ pub use tokio_postgres_rustls::MakeRustlsConnect;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SslMode {
     Disable,
-    /// libpq's default, and so dbdelve's: encrypt when the server offers it, and
+    /// libpq's default, and so vernier's: encrypt when the server offers it, and
     /// carry on in the clear when it does not.
     #[default]
     Prefer,
@@ -297,7 +297,7 @@ impl ServerCertVerifier for TrustAnyServer {
     }
 }
 
-/// libpq's `verify-ca`: the chain must reach a root dbdelve trusts, but the name
+/// libpq's `verify-ca`: the chain must reach a root vernier trusts, but the name
 /// on the certificate is not compared to the host that was dialled.
 ///
 /// Useful where one authority issues for a fleet and the host names are not
@@ -385,7 +385,7 @@ mod tests {
     }
 
     #[test]
-    fn a_mode_dbdelve_cannot_honour_is_refused_by_name() {
+    fn a_mode_vernier_cannot_honour_is_refused_by_name() {
         // Never silently downgraded to `prefer`: `allow` asks for plaintext
         // first, which is the opposite order.
         assert!(SslMode::parse("allow").is_err());

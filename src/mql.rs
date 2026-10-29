@@ -1,17 +1,17 @@
-//! mongosh-style statements, read by DBDelve: the Mongo counterpart of
+//! mongosh-style statements, read by Vernier: the Mongo counterpart of
 //! `sql.rs`.
 //!
 //! Nothing here executes JavaScript. mongosh statements are JavaScript
 //! expressions, so `tree-sitter-javascript` reads them: it finds statement
 //! boundaries in a half-typed buffer, steps over comments and strings, and
 //! tells a regex from anything else. What this module adds is a strict walk
-//! over that tree into DBDelve's own types, refusing everything outside the
+//! over that tree into Vernier's own types, refusing everything outside the
 //! closed language below -- `db.<collection>.<method>(…)` and its relatives,
 //! over literals. Reading a statement whole is what lets it be classified
 //! before it runs, which on Mongo is Read-only mode's only boundary: there is
 //! no server-side hold to fall back on.
 //!
-//! The literal tree is DBDelve's own (`Value`); `db/mongo.rs` turns it into
+//! The literal tree is Vernier's own (`Value`); `db/mongo.rs` turns it into
 //! BSON, so no driver type reaches this module.
 
 use std::cell::Cell;
@@ -32,7 +32,7 @@ use crate::sql::{Destructive, Mode, Verdict};
 
 pub(crate) mod browse;
 
-/// One statement of a buffer, as DBDelve reads it.
+/// One statement of a buffer, as Vernier reads it.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Statement {
     /// Byte range in the text it was parsed from, terminating `;` excluded.
@@ -679,7 +679,7 @@ fn show(what: &str, at: usize) -> Result<Target, ParseError> {
         other => Err(error(
             at,
             format!(
-                "`show {other}` is not one DBDelve reads; it reads `show dbs` and `show collections`"
+                "`show {other}` is not one Vernier reads; it reads `show dbs` and `show collections`"
             ),
         )),
     }
@@ -741,7 +741,7 @@ fn next_call<'t>(links: &mut Links<'t>) -> Option<Node<'t>> {
     }
 }
 
-/// A strict reading of the tree: anything outside the language DBDelve reads
+/// A strict reading of the tree: anything outside the language Vernier reads
 /// is an error, never skipped.
 struct Walk<'s> {
     source: &'s str,
@@ -760,7 +760,7 @@ impl<'s> Walk<'s> {
         match text.contains('\\') {
             true => Err(error(
                 node.start_byte(),
-                format!("`{text}` spells a name with an escape, which DBDelve does not read"),
+                format!("`{text}` spells a name with an escape, which Vernier does not read"),
             )),
             false => Ok(text),
         }
@@ -770,7 +770,7 @@ impl<'s> Walk<'s> {
         error(
             node.start_byte(),
             format!(
-                "`{}` is not {what} DBDelve reads",
+                "`{}` is not {what} Vernier reads",
                 snippet(node, self.source)
             ),
         )
@@ -866,7 +866,7 @@ impl<'s> Walk<'s> {
                         .into_iter()
                         .find(|method| method.name() == name)
                         .ok_or_else(|| {
-                            error(at, format!("`db.{name}` is not a method DBDelve reads"))
+                            error(at, format!("`db.{name}` is not a method Vernier reads"))
                         })?;
                     let call = self.call(method, name, method.arity(), dot, arguments)?;
                     if let Some(Link::Member { dot, .. }) = links.next() {
@@ -894,7 +894,7 @@ impl<'s> Walk<'s> {
             .ok_or_else(|| {
                 error(
                     at,
-                    format!("`{name}` is not a collection method DBDelve reads"),
+                    format!("`{name}` is not a collection method Vernier reads"),
                 )
             })?;
         let call = self.call(method, name, method.arity(), dot, arguments)?;
@@ -921,7 +921,7 @@ impl<'s> Walk<'s> {
                 .into_iter()
                 .find(|method| method.name() == link)
                 .ok_or_else(|| {
-                    error(at, format!("`{link}` is not a cursor method DBDelve reads"))
+                    error(at, format!("`{link}` is not a cursor method Vernier reads"))
                 })?;
             let arguments = next_call(&mut links).ok_or_else(|| {
                 error(at, format!("`{link}` is a method, and is not called here"))
@@ -1316,7 +1316,7 @@ fn constructor_value(
         (other, _) => {
             return Err(error(
                 at,
-                format!("`{other}` is not a constructor DBDelve reads"),
+                format!("`{other}` is not a constructor Vernier reads"),
             ));
         }
     };
@@ -2164,7 +2164,7 @@ pub(crate) fn writable_field(field: &str) -> bool {
 
 pub(crate) fn unwritable_field(field: &str) -> String {
     format!(
-        "`{field}` is a field name DBDelve does not write: a `.` or a leading `$` would make it name another field or an operator."
+        "`{field}` is a field name Vernier does not write: a `.` or a leading `$` would make it name another field or an operator."
     )
 }
 
@@ -2175,7 +2175,7 @@ fn collection(table: &str) -> String {
 /// `{_id: <value>}`, from the key's values as the server sent them.
 fn key_filter(keys: &[(String, String)], types: &[(String, String)]) -> Result<String, String> {
     if keys.is_empty() {
-        return Err("dbdelve cannot name an edited row by its primary key.".into());
+        return Err("Vernier cannot name an edited row by its primary key.".into());
     }
     let fields = keys
         .iter()
@@ -2214,7 +2214,7 @@ fn typed(field: &str, text: &str, tag: Option<&str>) -> Result<Value, String> {
     match operator_free(&value) {
         true => Ok(value),
         false => Err(format!(
-            "{field}: a field name starting with `$` inside a value is an operator, which DBDelve does not write."
+            "{field}: a field name starting with `$` inside a value is an operator, which Vernier does not write."
         )),
     }
 }
@@ -2394,7 +2394,7 @@ fn operator_free(value: &Value) -> bool {
     }
 }
 
-/// Whether `text` is a write DBDelve's grid could have generated, read back
+/// Whether `text` is a write Vernier's grid could have generated, read back
 /// out of the parse rather than trusted because `update_batch`, `insert_row`
 /// or `delete_row` wrote it: `sql::is_generated_write` for MongoDB.
 ///
@@ -3179,7 +3179,7 @@ mod tests {
         );
         assert_eq!(
             fails("show tables").message,
-            "`show tables` is not one DBDelve reads; it reads `show dbs` and `show collections`"
+            "`show tables` is not one Vernier reads; it reads `show dbs` and `show collections`"
         );
     }
 
@@ -3251,7 +3251,7 @@ mod tests {
         assert_eq!(method("db.dropDatabase()"), (None, DbMethod::DropDatabase));
         assert_eq!(
             fails("db.eval('1')").message,
-            "`db.eval` is not a method DBDelve reads"
+            "`db.eval` is not a method Vernier reads"
         );
         assert_eq!(
             fails("db.getSiblingDB(1).c.find()").message,
@@ -3332,7 +3332,7 @@ mod tests {
         one("db.c.find().pretty()");
         assert_eq!(
             fails("db.c.find().forEach(printjson)").message,
-            "`forEach` is not a cursor method DBDelve reads"
+            "`forEach` is not a cursor method Vernier reads"
         );
         assert_eq!(
             fails("db.c.insertOne({}).limit(1)").message,
@@ -3348,7 +3348,7 @@ mod tests {
         );
         assert_eq!(
             fails("db.c.findAll()").message,
-            "`findAll` is not a collection method DBDelve reads"
+            "`findAll` is not a collection method Vernier reads"
         );
     }
 
@@ -3409,7 +3409,7 @@ mod tests {
         assert_eq!(after.message, "Unexpected `db`");
         assert_eq!(
             fails("db.c.find(x)").message,
-            "`x` is not a literal DBDelve reads"
+            "`x` is not a literal Vernier reads"
         );
     }
 
@@ -3699,7 +3699,7 @@ mod tests {
         );
         assert_eq!(
             literal_fails("Frobnicate(1)"),
-            "`Frobnicate` is not a constructor DBDelve reads"
+            "`Frobnicate` is not a constructor Vernier reads"
         );
         assert_eq!(
             literal_fails("MinKey(1)"),
@@ -4277,7 +4277,7 @@ mod tests {
 
     fn edited(sets: &[(&str, NewValue)], id: &str, types: &[(&str, &str)]) -> PendingRow {
         PendingRow {
-            schema: "dbdelve_dev".into(),
+            schema: "vernier_dev".into(),
             table: "accounts".into(),
             sets: sets
                 .iter()
@@ -4742,7 +4742,7 @@ mod tests {
             let refusal = format(text).expect_err(text);
             assert!(!refusal.contains("dollar"), "{refusal}");
         }
-        // Valid JavaScript, but not a statement DBDelve reads.
+        // Valid JavaScript, but not a statement Vernier reads.
         assert!(format("db.c.find().count()").is_err());
     }
 

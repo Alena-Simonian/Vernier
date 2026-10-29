@@ -1,4 +1,4 @@
-//! The themes in dbdelve's own [`store::theme_directory`]: read at startup,
+//! The themes in vernier's own [`store::theme_directory`]: read at startup,
 //! and added to at runtime by importing one from another app.
 
 use std::path::{Path, PathBuf};
@@ -72,7 +72,7 @@ pub(crate) fn prewarm() {
     });
 }
 
-/// Every theme in dbdelve's directory, as of startup plus anything imported.
+/// Every theme in vernier's directory, as of startup plus anything imported.
 pub(super) fn themes() -> Vec<Theme> {
     USER_THEMES
         .read()
@@ -80,7 +80,7 @@ pub(super) fn themes() -> Vec<Theme> {
         .clone()
 }
 
-/// Read every file in dbdelve's directory. A file that does not read or parse
+/// Read every file in vernier's directory. A file that does not read or parse
 /// is skipped, never fatal, and a name already taken goes to whichever came
 /// first: built-in, then the files in name order.
 pub(crate) fn load() {
@@ -105,7 +105,7 @@ pub(crate) fn is_imported(name: &str) -> bool {
         .any(|theme| theme.name.eq_ignore_ascii_case(name))
 }
 
-/// Write a source's theme into dbdelve's directory as a native file and list
+/// Write a source's theme into vernier's directory as a native file and list
 /// it, replacing any theme of the same name, and hand back the theme to
 /// install.
 pub(crate) fn import(source: Source, index: usize) -> Result<Theme, String> {
@@ -184,7 +184,7 @@ mod tests {
         assert!(found.iter().any(|theme| theme.name == "Zed: One Dark"));
 
         let directory =
-            std::env::temp_dir().join(format!("dbdelve-theme-import-{}", std::process::id()));
+            std::env::temp_dir().join(format!("vernier-theme-import-{}", std::process::id()));
         let named = |name| Theme {
             name,
             ..Theme::dark()

@@ -255,7 +255,7 @@ impl Run {
     }
 }
 
-/// Whether DBDelve may send `sql` for an import under `mode`: the write gate
+/// Whether Vernier may send `sql` for an import under `mode`: the write gate
 /// first, since a statement it did not write is refused whatever the mode.
 pub(crate) fn admitted(
     engine: Engine,
@@ -264,13 +264,13 @@ pub(crate) fn admitted(
     confirmed: &[Destructive],
 ) -> Result<(), String> {
     if !sql::is_generated_write_on(engine, sql) {
-        return Err("DBDelve refused to run a statement it wrote itself.".into());
+        return Err("Vernier refused to run a statement it wrote itself.".into());
     }
     match sql::gate(&sql::classify(engine, sql), mode, confirmed) {
         None => Ok(()),
         Some(Stop::Upgrade(_)) => Err("Read-only does not allow the import's writes.".into()),
         Some(Stop::Confirm(_) | Stop::RunOnce) => {
-            Err("DBDelve refused to run a statement it wrote itself.".into())
+            Err("Vernier refused to run a statement it wrote itself.".into())
         }
     }
 }
@@ -328,7 +328,7 @@ pub(crate) fn live_round_trip(connection: Connection, engine: Engine, schema: &s
     use super::{CHUNK_BYTES, OnDuplicate, Options, TargetColumn, Transaction, chunks, prepare};
     use crate::db::Fetch;
 
-    const TABLE: &str = "dbdelve_import_test";
+    const TABLE: &str = "vernier_import_test";
     const DUPLICATE: &str = "1,a\n2,b\n3,c\n3,dup\n5,e\n";
     const CLEAN: &str = "1,a\n2,b\n3,c\n4,d\n5,e\n";
     let document = engine.takes_new_fields();
@@ -767,7 +767,7 @@ mod tests {
     fn every_submission_passes_the_write_gate_and_the_mode_check() {
         assert_eq!(
             admitted(Engine::Postgres, "DROP TABLE t", Mode::Full, &[]),
-            Err("DBDelve refused to run a statement it wrote itself.".into())
+            Err("Vernier refused to run a statement it wrote itself.".into())
         );
         assert_eq!(
             admitted(
@@ -826,9 +826,9 @@ mod tests {
     #[ignore = "requires the compose databases"]
     fn live_an_import_round_trips_on_mysql() {
         live_round_trip(
-            live(&var("dbdelve_MYSQL_URL")),
+            live(&var("vernier_MYSQL_URL")),
             Engine::MySql,
-            "dbdelve_dev",
+            "vernier_dev",
         );
     }
 
@@ -836,9 +836,9 @@ mod tests {
     #[ignore = "requires the compose databases"]
     fn live_an_import_round_trips_on_mariadb() {
         live_round_trip(
-            live(&var("dbdelve_MARIADB_URL")),
+            live(&var("vernier_MARIADB_URL")),
             Engine::MariaDb,
-            "dbdelve_dev",
+            "vernier_dev",
         );
     }
 
@@ -846,7 +846,7 @@ mod tests {
     #[ignore = "requires the compose databases"]
     fn live_an_import_round_trips_on_sqlite() {
         let sqlite = Connection::open(ConnectionConfig::Sqlite {
-            path: var("dbdelve_SQLITE_PATH"),
+            path: var("vernier_SQLITE_PATH"),
             statement_timeout: 0,
         });
         live_round_trip(sqlite.unwrap(), Engine::Sqlite, "main");
@@ -855,16 +855,16 @@ mod tests {
     #[test]
     #[ignore = "requires the compose databases"]
     fn live_an_import_round_trips_on_sql_server() {
-        live_round_trip(live(&var("dbdelve_MSSQL_URL")), Engine::SqlServer, "dbo");
+        live_round_trip(live(&var("vernier_MSSQL_URL")), Engine::SqlServer, "dbo");
     }
 
     #[test]
     #[ignore = "requires the compose databases"]
     fn live_an_import_round_trips_on_mongodb() {
         live_round_trip(
-            live(&var("dbdelve_MONGO_URL")),
+            live(&var("vernier_MONGO_URL")),
             Engine::MongoDb,
-            "dbdelve_dev",
+            "vernier_dev",
         );
     }
 }

@@ -1,11 +1,11 @@
 # Themes
 
-DBDelve can import themes from Zed and VS Code, and reads theme files you write
+Vernier can import themes from Zed and VS Code, and reads theme files you write
 yourself.
 
 ## Matching the system
 
-Turn on **Match system appearance** in Settings, under Appearance, and DBDelve
+Turn on **Match system appearance** in Settings, under Appearance, and Vernier
 switches between a light and a dark theme as the system does. The one Theme
 row becomes two, **Light theme** and **Dark theme**, and each lists only the
 themes of its side. Moving through either list previews each theme, whichever
@@ -28,7 +28,7 @@ Code…** at the end of the list.
 - VS Code: the themes VS Code ships with, read from its install, and those of
   every extension in `~/.vscode/extensions`.
 
-Each is previewed as you move through the list, and Enter imports it: DBDelve
+Each is previewed as you move through the list, and Enter imports it: Vernier
 converts it into a theme file of its own and switches to it. The imported
 theme's name is prefixed with the app it came from, as in "Zed: One Dark" or
 "VS Code: Monokai".
@@ -40,14 +40,14 @@ picks a free filename instead.
 ## Writing your own
 
 Imported themes, and any you write yourself, live in a `themes` folder next
-to DBDelve's other data:
+to Vernier's other data:
 
-- macOS: `~/Library/Application Support/dbdelve/themes`
-- Linux: `$XDG_DATA_HOME/dbdelve/themes`, or `~/.local/share/dbdelve/themes`
-- Windows: `%APPDATA%\dbdelve\themes`
+- macOS: `~/Library/Application Support/vernier/themes`
+- Linux: `$XDG_DATA_HOME/vernier/themes`, or `~/.local/share/vernier/themes`
+- Windows: `%APPDATA%\vernier\themes`
 
-A file there is either a Zed theme file or one DBDelve theme, a `.json` file
-like this one. It is DBDelve Dark, so you can save it as `harbor.json` and
+A file there is either a Zed theme file or one Vernier theme, a `.json` file
+like this one. It is Vernier Dark, so you can save it as `harbor.json` and
 change the colours from there:
 
 ```json
@@ -89,13 +89,13 @@ change the colours from there:
 
 | Field | |
 | --- | --- |
-| `name` | Required. Shown in the theme picker. A theme named like one DBDelve ships is skipped. |
-| `appearance` | `"dark"` or `"light"`. Picks the theme any missing colour comes from: DBDelve Dark or DBDelve Light. Defaults to dark. |
+| `name` | Required. Shown in the theme picker. A theme named like one Vernier ships is skipped. |
+| `appearance` | `"dark"` or `"light"`. Picks the theme any missing colour comes from: Vernier Dark or Vernier Light. Defaults to dark. |
 | `glass` | `true` paints the window over the blurred desktop, the way the Glass themes do. Defaults to `false`. |
-| `colors` | Every key is optional. Any you leave out comes from DBDelve Dark or Light. |
+| `colors` | Every key is optional. Any you leave out comes from Vernier Dark or Light. |
 
 Colours are written `#RGB`, `#RGBA`, `#RRGGBB` or `#RRGGBBAA`. A value in any
-other form is ignored, and that colour falls back to DBDelve's.
+other form is ignored, and that colour falls back to Vernier's.
 
 | Colour | Where it shows |
 | --- | --- |
@@ -119,4 +119,4 @@ The colours from `bg` to `syntax_operator` are solid. If you give one an alpha,
 it is flattened over `surface`. The last six are washes painted over whatever
 sits under them, so give them a low alpha, as above.
 
-Restart DBDelve to pick up a file you changed by hand.
+Restart Vernier to pick up a file you changed by hand.

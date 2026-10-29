@@ -1,8 +1,8 @@
-//! dbdelve's icon set.
+//! vernier's icon set.
 //!
 //! GPUI renders an SVG by asking the application's [`AssetSource`] for a file,
 //! and gpui-component names Lucide files without shipping any. Rather than
-//! vendoring another project's artwork into the repository, dbdelve depends on
+//! vendoring another project's artwork into the repository, vernier depends on
 //! `icondata_lu` — Lucide as Rust data — and serves the documents from memory
 //! at the paths GPUI asks for. Nothing is read from disk, so this works the
 //! same from `cargo run` and from a bundled `.app`.
@@ -17,7 +17,7 @@ use gpui::{AssetSource, Result, SharedString};
 use gpui_component::Icon;
 use icondata_core::IconData;
 
-/// The icons dbdelve can draw, by the path GPUI asks for.
+/// The icons vernier can draw, by the path GPUI asks for.
 ///
 /// The gpui-component widgets ask for their own paths — those are Lucide names
 /// too, so they resolve here as well. Add a row when something asks for one;
@@ -100,11 +100,11 @@ const ICONS: [(&str, &IconData); 69] = [
     ("icons/engine-redis.svg", icondata_si::SiRedis),
 ];
 
-/// dbdelve's own names for the icons it draws, so a call site names a thing
+/// vernier's own names for the icons it draws, so a call site names a thing
 /// rather than a file.
 pub mod icon {
     pub const CHEVRON_DOWN: &str = "icons/chevron-down.svg";
-    /// Windows' caption buttons, which dbdelve draws itself there.
+    /// Windows' caption buttons, which vernier draws itself there.
     pub const MINIMIZE: &str = "icons/minus.svg";
     pub const MAXIMIZE: &str = "icons/square.svg";
     pub const CLOSE_WINDOW: &str = "icons/close.svg";
@@ -187,7 +187,7 @@ pub struct Icons;
 
 /// The app's own mark, in colour. Drawn with `img`, which keeps an SVG's
 /// paint, where `svg` and `icon` keep only its shape.
-pub const BRAND: &str = "brand/dbdelve.svg";
+pub const BRAND: &str = "brand/vernier.svg";
 
 /// The icon's file declares 1024px, and `img` rasterises an SVG at its
 /// declared size and then scales the bitmap. Shrinking that far with no
@@ -195,7 +195,7 @@ pub const BRAND: &str = "brand/dbdelve.svg";
 /// is drawn: enough for a 2x and a 3x display.
 fn brand_document() -> String {
     let side = (3. * crate::theme::layout::WELCOME_MARK_SIZE) as u32;
-    include_str!("../assets/icon/dbdelve.svg").replacen(
+    include_str!("../assets/icon/vernier.svg").replacen(
         r#"width="1024" height="1024""#,
         &format!(r#"width="{side}" height="{side}""#),
         1,
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn every_listed_icon_draws_something() {
         // The paths the library's own widgets ask for are never named in
-        // dbdelve, so nothing above would notice a row here going bad.
+        // vernier, so nothing above would notice a row here going bad.
         for (path, _) in ICONS {
             assert_draws(path);
         }

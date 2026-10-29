@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds DBDelve for Linux and wraps it in the release tarball: the binary, its
+# Builds Vernier for Linux and wraps it in the release tarball: the binary, its
 # icons, a desktop entry and an install.sh that puts them where a desktop looks.
 #
 # Nothing is signed and nothing is installed from here -- the tarball is what
@@ -18,7 +18,7 @@ VERSION="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
 # stale one from an earlier build ends up in the tarball.
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 ARCH="$(uname -m)"
-NAME="dbdelve-$VERSION-linux-$ARCH"
+NAME="vernier-$VERSION-linux-$ARCH"
 STAGE="$TARGET_DIR/linux/$NAME"
 TARBALL="$TARGET_DIR/linux/$NAME.tar.gz"
 
@@ -26,10 +26,10 @@ cargo build --release
 
 rm -rf "$STAGE"
 mkdir -p "$STAGE/icons"
-install -m 755 "$TARGET_DIR/release/dbdelve" "$STAGE/dbdelve"
+install -m 755 "$TARGET_DIR/release/vernier" "$STAGE/vernier"
 install -m 755 assets/linux/install.sh "$STAGE/install.sh"
-install -m 644 assets/linux/dbdelve.desktop "$STAGE/dbdelve.desktop"
-install -m 644 assets/linux/icons/dbdelve-*.png "$STAGE/icons/"
+install -m 644 assets/linux/vernier.desktop "$STAGE/vernier.desktop"
+install -m 644 assets/linux/icons/vernier-*.png "$STAGE/icons/"
 cp LICENSE NOTICES.md "$STAGE/"
 # NOTICES.md points at licenses/OFL-1.1.txt, and the OFL asks that the licence
 # travel with the fonts -- which are compiled into the binary above.

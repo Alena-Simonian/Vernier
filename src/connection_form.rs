@@ -1123,7 +1123,7 @@ mod tests {
             host: "db.example".to_string(),
             port: None,
             database: "app".to_string(),
-            user: "dbdelve".to_string(),
+            user: "vernier".to_string(),
             password: password.to_string(),
             sslmode: SslMode::default(),
             root_certificate: None,
@@ -1144,7 +1144,7 @@ mod tests {
         assert_eq!(
             password_to_persist(
                 &ConnectionConfig::Sqlite {
-                    path: "/tmp/dbdelve.db".to_string(),
+                    path: "/tmp/vernier.db".to_string(),
                     statement_timeout: 0
                 },
                 Origin::Form

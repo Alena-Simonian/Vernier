@@ -1,6 +1,6 @@
 # Redis
 
-DBDelve speaks to Redis 6 or later, and to what speaks its protocol (Valkey,
+Vernier speaks to Redis 6 or later, and to what speaks its protocol (Valkey,
 KeyDB, Dragonfly). A server that refuses `HELLO 3`, as Redis before 6 does, is
 spoken to in RESP2. This page is what you need to know before filling in the
 form, and what behaves differently from the SQL engines.
@@ -20,7 +20,7 @@ rediss://:password@db.example.com/2?sslmode=require
 The development container:
 
 ```text
-redis://dbdelve:dbdelve@127.0.0.1:56379/0
+redis://vernier:vernier@127.0.0.1:56379/0
 ```
 
 ## TLS
@@ -45,7 +45,7 @@ destructive, except a name whose subcommand decides that (`CONFIG`, `CLIENT`),
 which has no tag.
 
 Some commands are refused before anything is sent, because they take the
-session DBDelve owns out from under it:
+session Vernier owns out from under it:
 
 - `SELECT`: pick the database from the database list instead.
 - `SUBSCRIBE`, `PSUBSCRIBE`, `SSUBSCRIBE`, `UNSUBSCRIBE` and its siblings,
@@ -59,7 +59,7 @@ ask the server for, so every command is looked up by name (and subcommand:
 nothing, writes need Read-write, `FLUSHDB`, `FLUSHALL`, `SHUTDOWN`, `DEBUG`,
 `CONFIG SET` and the like need Full and ask first, and a command the table does
 not know is refused in Read-only and asks once elsewhere. Scripts (`EVAL`,
-`EVALSHA`, `FCALL`) need Full, since DBDelve cannot see what their
+`EVALSHA`, `FCALL`) need Full, since Vernier cannot see what their
 `redis.call`s do; their `_RO` forms, which the server holds to reads, are
 reads. A write-less ACL user is the only real boundary.
 
@@ -177,7 +177,7 @@ failure says which one failed and how many ran before it.
 
 ## Things that behave differently here
 
-- **Cancel kills the session.** DBDelve records the connection's `CLIENT ID`
+- **Cancel kills the session.** Vernier records the connection's `CLIENT ID`
   and sends `CLIENT KILL ID` from a second connection. The next command dials
   a fresh one, so a `MULTI` or `WATCH` open on the old session is gone. The
   statement timeout, and a broken socket, end the session the same way.

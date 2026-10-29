@@ -170,7 +170,7 @@ registry! {
     ("toggle_row_panel", "Toggle Row Panel", None, ["secondary-shift-i"], ToggleRowPanel),
     ("toggle_row_edit", "Toggle Row Panel Edit Mode", None, ["secondary-shift-e"], ToggleRowEdit),
     ("toggle_structure", "Toggle Data / Structure", None, ["secondary-shift-d"], ToggleStructure),
-    ("quit", "Quit dbdelve", None, ["secondary-q"], Quit),
+    ("quit", "Quit Vernier", None, ["secondary-q"], Quit),
     // Click or command-palette only today; listed so they can be given a
     // chord for the first time.
     ("cancel_query", "Cancel Query", None, [], CancelQuery),
@@ -286,7 +286,7 @@ mod tests {
         overrides.insert("quit".to_string(), "cmd-enter".to_string());
         assert_eq!(
             conflict("cmd-enter", None, "run_query", &overrides),
-            Some("Quit dbdelve")
+            Some("Quit Vernier")
         );
     }
 

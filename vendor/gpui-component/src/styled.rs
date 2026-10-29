@@ -37,18 +37,18 @@ pub(crate) fn popover_ring(cx: &App) -> Hsla {
     cx.theme().foreground.alpha(POPOVER_RING_INK)
 }
 
-/// dbdelve patch: the backdrop blur under a frosted popup, as a gaussian sigma.
+/// vernier patch: the backdrop blur under a frosted popup, as a gaussian sigma.
 /// Heavy enough that a grid's rows behind a menu read as tone, not as text.
 pub const POPOVER_BLUR: Pixels = px(16.);
 
-/// dbdelve patch: whether popups frost. A theme says so by handing over a
+/// vernier patch: whether popups frost. A theme says so by handing over a
 /// translucent `popover` colour: the tint a frosted popup lays over the blur.
 /// An opaque one keeps every popup exactly as upstream draws it.
 pub(crate) fn popover_frosted(cx: &App) -> bool {
     cx.theme().popover.a < 1.
 }
 
-/// dbdelve patch: the hover and selection fill inside a popup. On frost it has
+/// vernier patch: the hover and selection fill inside a popup. On frost it has
 /// to be a wash, since an opaque fill punches a solid slab through the glass:
 /// the theme's own `accent` when that already is one, so a menu's highlight
 /// still matches every other hover in the app, and Zeron's menu wash when it
@@ -239,7 +239,7 @@ impl<T: Styled + Sized> ThemeStyled for T {
 
     fn popover_style(self, cx: &App) -> Self {
         let theme = cx.theme();
-        // dbdelve patch: a frosted popup is edged by a hairline border and casts
+        // vernier patch: a frosted popup is edged by a hairline border and casts
         // no shadow. GPUI paints a drop shadow as a filled rect under the whole
         // element, so through a translucent tint it darkens the frost itself.
         if popover_frosted(cx) {

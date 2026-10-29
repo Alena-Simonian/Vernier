@@ -3,7 +3,7 @@
 //! `TabSeparatedWithNamesAndTypes`.
 //!
 //! The user's statements share one server session, so `USE`, `SET` and
-//! temporary tables carry from one run to the next. DBDelve's own go without
+//! temporary tables carry from one run to the next. Vernier's own go without
 //! one: a session runs one query at a time, and a preview or a catalog load
 //! must neither queue behind a long run nor take its lock.
 
@@ -240,13 +240,13 @@ struct Session {
 enum Kind {
     /// On the profile's session.
     User,
-    /// DBDelve's, run at the user's ask: a preview, an edit.
+    /// Vernier's, run at the user's ask: a preview, an edit.
     Generated,
-    /// DBDelve's, unseen: the connect, the catalog, a structure.
+    /// Vernier's, unseen: the connect, the catalog, a structure.
     Internal,
     /// A statement of a queue run at once, under that run's hold.
     Alongside { read_only: bool },
-    /// DBDelve's `KILL` of another request, never stopped or killed itself.
+    /// Vernier's `KILL` of another request, never stopped or killed itself.
     Kill { within: Duration },
     /// The `USE` that puts a new session in the profile's database, on the
     /// session and under the run's Cancel.
@@ -557,7 +557,7 @@ impl Connection {
             Ok(Some(described)) => described,
             Ok(None) => {
                 return refused(&format!(
-                    "DBDelve found no table {schema}.{table}, so these rows cannot be edited."
+                    "Vernier found no table {schema}.{table}, so these rows cannot be edited."
                 ));
             }
             Err(_) => return (None, None),
@@ -838,7 +838,7 @@ impl Connection {
     }
 
     /// One `KILL QUERY … SYNC`, its outcome read from the row it returns.
-    /// `query_id` is one of ours, `dbdelve-` and hex, so it is spliced as is.
+    /// `query_id` is one of ours, `vernier-` and hex, so it is spliced as is.
     fn kill(&self, query_id: &str, within: Duration) -> Result<Kill, DbError> {
         let sql = format!("KILL QUERY WHERE query_id = '{query_id}' SYNC");
         let found = match self.request(
@@ -1298,7 +1298,7 @@ fn counted_table(guard: &str) -> Option<(String, String)> {
 }
 
 /// The schema and table of a `SELECT *` from one table, written with both
-/// names as DBDelve's previews are.
+/// names as Vernier's previews are.
 fn preview_of(sql: &str) -> Option<(String, String)> {
     let read = table_read(Engine::ClickHouse, sql)?;
     match (read.table.as_slice(), read.columns.as_slice()) {
@@ -1555,13 +1555,13 @@ fn written_rows(headers: &HeaderMap) -> Option<u64> {
     summary["written_rows"].as_str()?.parse().ok()
 }
 
-/// `dbdelve-` and 32 hex digits, for a query id or a session id.
+/// `vernier-` and 32 hex digits, for a query id or a session id.
 fn random_id() -> Result<String, DbError> {
     let mut bytes = [0u8; 16];
     SystemRandom::new()
         .fill(&mut bytes)
         .map_err(|_| plain_error("The system's random number generator failed.".into()))?;
-    let mut id = String::from("dbdelve-");
+    let mut id = String::from("vernier-");
     for byte in bytes {
         id.push_str(&format!("{byte:02x}"));
     }
@@ -1622,7 +1622,7 @@ mod tests {
     fn profile(mock: &Mock) -> ServerConfig {
         ServerConfig {
             user: "me@example.com".into(),
-            database: "dbdelve_dev".into(),
+            database: "vernier_dev".into(),
             ..mock.server()
         }
     }
@@ -1687,7 +1687,7 @@ mod tests {
         open(&mock);
         let [read] = sent(&mock, "system.settings").try_into().unwrap();
         assert_eq!(names(&read), ["database", "default_format", "query_id"]);
-        assert_eq!(read.param("database"), Some("dbdelve_dev"));
+        assert_eq!(read.param("database"), Some("vernier_dev"));
         assert_eq!(read.param("default_format"), Some(FORMAT));
         let [validation] = sent(&mock, VALIDATION_SQL).try_into().unwrap();
         assert_eq!(validation.statement, VALIDATION_SQL);
@@ -1720,9 +1720,9 @@ mod tests {
         run(&connection, "SELECT n").unwrap();
         run(&connection, "SELECT n").unwrap();
         let [enter] = sent(&mock, "USE `").try_into().unwrap();
-        assert_eq!(enter.statement, "USE `dbdelve_dev`");
+        assert_eq!(enter.statement, "USE `vernier_dev`");
         let session = enter.param("session_id").unwrap();
-        assert!(session.starts_with("dbdelve-"), "{session}");
+        assert!(session.starts_with("vernier-"), "{session}");
         assert_eq!(
             names(&enter),
             [
@@ -1747,7 +1747,7 @@ mod tests {
     }
 
     #[test]
-    fn dbdelves_own_statements_go_without_a_session() {
+    fn verniers_own_statements_go_without_a_session() {
         let mock = Mock::start();
         let connection = open(&mock);
         numbers(&mock);
@@ -1767,7 +1767,7 @@ mod tests {
         for request in requests {
             assert_eq!(request.param("session_id"), None);
             assert_eq!(request.param("session_check"), None);
-            assert_eq!(request.param("database"), Some("dbdelve_dev"));
+            assert_eq!(request.param("database"), Some("vernier_dev"));
         }
     }
 
@@ -1838,7 +1838,7 @@ mod tests {
     }
 
     #[test]
-    fn a_query_id_is_dbdelve_and_32_hex_digits_and_never_repeats() {
+    fn a_query_id_is_vernier_and_32_hex_digits_and_never_repeats() {
         let mock = Mock::start();
         let connection = open(&mock);
         numbers(&mock);
@@ -1851,7 +1851,7 @@ mod tests {
             .collect();
         assert_eq!(ids.len(), 5);
         for id in &ids {
-            let hex = id.strip_prefix("dbdelve-").unwrap();
+            let hex = id.strip_prefix("vernier-").unwrap();
             assert_eq!(hex.len(), 32, "{id}");
             assert!(
                 hex.bytes()
@@ -2009,7 +2009,7 @@ mod tests {
         assert_ne!(fresh.param("session_id"), first.param("session_id"));
         assert_eq!(enter_fresh.param("session_id"), fresh.param("session_id"));
         assert_eq!(enter_fresh.param("session_check"), None);
-        assert_eq!(enter_fresh.param("database"), Some("dbdelve_dev"));
+        assert_eq!(enter_fresh.param("database"), Some("vernier_dev"));
         assert_eq!(fresh.param("session_check"), Some("1"));
     }
 
@@ -2029,7 +2029,7 @@ mod tests {
             let [failed, entered] = sent(&mock, "USE `").try_into().unwrap();
             assert_eq!(entered.param("session_id"), failed.param("session_id"));
             assert_eq!(entered.param("session_check"), None);
-            assert_eq!(entered.param("database"), Some("dbdelve_dev"));
+            assert_eq!(entered.param("database"), Some("vernier_dev"));
             for request in sent(&mock, "SELECT n") {
                 assert_eq!(request.param("session_id"), entered.param("session_id"));
                 assert_eq!(request.param("session_check"), Some("1"));
@@ -2609,7 +2609,7 @@ mod tests {
             ),
             (
                 "2",
-                "2 rows have exactly these values, so DBDelve will not change one of them.",
+                "2 rows have exactly these values, so Vernier will not change one of them.",
             ),
         ] {
             let mock = Mock::start();
@@ -2829,7 +2829,7 @@ mod tests {
         assert_eq!(
             error.message,
             format!(
-                "{APPLIED_ONE} failed before it was sent, while DBDelve counted its rows: \
+                "{APPLIED_ONE} failed before it was sent, while Vernier counted its rows: \
                  Cancelled."
             )
         );
@@ -2896,7 +2896,7 @@ mod tests {
         assert_eq!(
             error.message,
             format!(
-                "{APPLIED_ONE} failed before it was sent, while DBDelve read its table: Memory \
+                "{APPLIED_ONE} failed before it was sent, while Vernier read its table: Memory \
                  limit exceeded (MEMORY_LIMIT_EXCEEDED)"
             )
         );
@@ -3317,7 +3317,7 @@ mod tests {
         let started = Instant::now();
         assert!(
             connection
-                .kill("dbdelve-0", Duration::from_millis(500))
+                .kill("vernier-0", Duration::from_millis(500))
                 .is_err()
         );
         let took = started.elapsed();
@@ -3680,7 +3680,7 @@ mod tests {
 }
 
 /// Against the dev container (`docker compose up -d --build clickhouse`), read
-/// from `dbdelve_CLICKHOUSE_URL`.
+/// from `vernier_CLICKHOUSE_URL`.
 #[cfg(test)]
 mod live {
     use super::*;
@@ -3692,8 +3692,8 @@ mod live {
 
     fn live_config() -> ServerConfig {
         let url =
-            std::env::var("dbdelve_CLICKHOUSE_URL").expect("dbdelve_CLICKHOUSE_URL is required");
-        crate::db::server_from_url(&url, "ClickHouse").expect("dbdelve_CLICKHOUSE_URL should parse")
+            std::env::var("vernier_CLICKHOUSE_URL").expect("vernier_CLICKHOUSE_URL is required");
+        crate::db::server_from_url(&url, "ClickHouse").expect("vernier_CLICKHOUSE_URL should parse")
     }
 
     fn live() -> Connection {
@@ -3759,7 +3759,7 @@ mod live {
 
     /// A marker no other statement carries, to find one in `system.processes`.
     fn marker() -> String {
-        random_id().unwrap().replace("dbdelve-", "marker")
+        random_id().unwrap().replace("vernier-", "marker")
     }
 
     fn processes_with(connection: &Connection, marker: &str) -> usize {
@@ -3782,7 +3782,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_connects_and_prefer_falls_back_to_plaintext() {
         assert_eq!(text(&ran(&live(), "SELECT 1 AS one")), "1");
         let prefer = ServerConfig {
@@ -3802,7 +3802,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_type_gallery_reads_as_it_was_recorded() {
         let live = ran(&live(), "SELECT * FROM type_gallery ORDER BY id");
         let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/dev/clickhouse/fixtures");
@@ -3816,18 +3816,18 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_pages_of_an_unsorted_preview_share_no_row() {
         let connection = live();
         let key = connection
-            .structure("dbdelve_dev", "events")
+            .structure("vernier_dev", "events")
             .unwrap()
             .row_key();
         assert!(!key.is_empty());
         let mut seen = std::collections::HashSet::new();
         for page in 0..5 {
             let preview = format!(
-                "SELECT * FROM `dbdelve_dev`.`events` LIMIT 1000 OFFSET {}",
+                "SELECT * FROM `vernier_dev`.`events` LIMIT 1000 OFFSET {}",
                 page * 1000
             );
             let paged = crate::sql::paged(Engine::ClickHouse, &preview, &key).unwrap();
@@ -3846,7 +3846,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_explain_plans_a_copy_without_running_it() {
         let connection = live();
         let statement = "SELECT * FROM system.numbers LIMIT 3";
@@ -3863,7 +3863,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_trailing_semicolon_runs() {
         let connection = live();
         for sql in ["SELECT 1;", "SELECT 1 ;\n", "SELECT 1; -- done\n"] {
@@ -3872,7 +3872,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_cancel_leaves_nothing_in_system_processes() {
         let connection = live();
         let marker = marker();
@@ -3902,7 +3902,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_session_is_usable_at_once_after_a_cancel() {
         let connection = live();
         for _ in 0..8 {
@@ -3925,7 +3925,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_stop_at_the_limit_leaves_nothing_in_system_processes() {
         let connection = live();
         let marker = marker();
@@ -3950,7 +3950,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_read_that_may_not_stop_is_drained_and_counted() {
         let result = live()
             .query(
@@ -3969,7 +3969,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_throwif_after_the_cap_fails_the_run() {
         let error = live()
             .query(
@@ -3986,7 +3986,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_timeout_stops_sleepeachrow_at_n() {
         let connection = Connection::open(&ServerConfig {
             statement_timeout: 2,
@@ -4013,7 +4013,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_read_only_hold_refuses_a_write_and_any_lifting_of_itself() {
         let connection = live();
         connection.set_read_only(true).unwrap();
@@ -4039,7 +4039,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_backup_and_insert_into_function_file_are_refused_in_read_only_before_sending() {
         for sql in [
             "BACKUP TABLE conformance TO Disk('backups', 'x.zip')",
@@ -4055,10 +4055,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_reader_connects_and_runs_and_a_timeout_fails_its_connect() {
         let reader = ServerConfig {
-            user: "dbdelve_reader".into(),
+            user: "vernier_reader".into(),
             ..live_config()
         };
         let connection = Connection::open(&reader).expect("a readonly user connects");
@@ -4095,7 +4095,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_use_carries_and_a_per_request_database_would_override_it() {
         let connection = live();
         for _ in 0..3 {
@@ -4106,7 +4106,7 @@ mod live {
         }
         assert_eq!(
             text(&ran(&connection, "SELECT currentDatabase()")),
-            "dbdelve_dev"
+            "vernier_dev"
         );
         ran(&connection, "USE analytics");
         assert_eq!(
@@ -4119,15 +4119,15 @@ mod live {
         );
         assert_eq!(
             text(&ran(&connection.apart(), "SELECT currentDatabase()")),
-            "dbdelve_dev"
+            "vernier_dev"
         );
 
         let id = lock(&connection.session).id.clone().unwrap();
         let (status, body) = raw(
             "SELECT currentDatabase()",
-            &format!("session_id={id}&session_check=1&database=dbdelve_dev"),
+            &format!("session_id={id}&session_check=1&database=vernier_dev"),
         );
-        assert_eq!((status, body.trim()), (200, "dbdelve_dev"));
+        assert_eq!((status, body.trim()), (200, "vernier_dev"));
         let (status, body) = raw(
             "SELECT currentDatabase()",
             &format!("session_id={id}&session_check=1"),
@@ -4136,11 +4136,11 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_an_expired_session_fails_one_run_and_the_next_opens_a_new_one() {
         let connection = live();
         ran(&connection, "SET max_threads = 3");
-        let id = format!("dbdelve-expiry-{}", marker());
+        let id = format!("vernier-expiry-{}", marker());
         let (status, _) = raw("SELECT 1", &format!("session_id={id}&session_timeout=1"));
         assert_eq!(status, 200);
         *lock(&connection.session) = Session {
@@ -4156,9 +4156,9 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_into_outfile_over_http_is_refused_by_the_server() {
-        let error = run(&live(), "SELECT 1 INTO OUTFILE 'dbdelve-x.out'").unwrap_err();
+        let error = run(&live(), "SELECT 1 INTO OUTFILE 'vernier-x.out'").unwrap_err();
         eprintln!("INTO OUTFILE over HTTP: {}", error.message);
         assert!(
             error.message.contains("INTO_OUTFILE_NOT_ALLOWED"),
@@ -4168,7 +4168,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_user_set_null_spelling_does_not_change_null() {
         let connection = live();
         ran(&connection, "SET format_tsv_null_representation = 'NULL'");
@@ -4183,7 +4183,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_statement_with_a_format_of_its_own_is_one_text_column() {
         let result = ran(&live(), "SELECT 1 AS a, 'x' AS b FORMAT JSON");
         assert_eq!(result.columns.len(), 1);
@@ -4196,7 +4196,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_column_named_with_a_backslash_comes_back_with_one() {
         let result = ran(&live(), "SELECT 1 AS `a\\\\b`, 2 AS `c\\td`");
         let names: Vec<&str> = result.columns.iter().map(|c| c.name.as_str()).collect();
@@ -4227,10 +4227,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_every_operator_filters_each_type_the_gallery_holds() {
         let connection = live();
-        let gallery = "dbdelve_dev.type_gallery";
+        let gallery = "vernier_dev.type_gallery";
         // Row 1 is `typical`, row 2 `edges`; each case says how many of the
         // two the operator keeps.
         let cases: [(&str, Operator, &str, &str); 44] = [
@@ -4299,10 +4299,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_percent_underscore_and_backslash_in_a_value_match_themselves() {
         let connection = live();
-        let from = "dbdelve_dev.dbdelve_filter_probe";
+        let from = "vernier_dev.vernier_filter_probe";
         ran(&connection, &format!("DROP TABLE IF EXISTS {from}"));
         ran(
             &connection,
@@ -4338,7 +4338,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_system_settings_has_the_readonly_column() {
         let result = ran(
             &live(),
@@ -4351,14 +4351,14 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the dev bastions and ClickHouse configured through dbdelve_SSH_CONFIG and dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the dev bastions and ClickHouse configured through vernier_SSH_CONFIG and vernier_CLICKHOUSE_URL"]
     fn live_ssh_a_query_runs_through_the_bastion() {
         // The compose server as the bastion sees it, by service name and the
         // port inside the network.
         let connection = Connection::open(&ServerConfig {
             host: "clickhouse".into(),
             port: Some(DEFAULT_PORT),
-            ssh: crate::db::ssh::live_bastion("dbdelve-bastion"),
+            ssh: crate::db::ssh::live_bastion("vernier-bastion"),
             ..live_config()
         })
         .expect("connection should open");
@@ -4384,7 +4384,7 @@ mod live {
         assert!(is_cancel(Engine::ClickHouse, &error), "{}", error.message);
     }
 
-    const FORMAT_AND_DATABASE: &str = "default_format=TSV&database=dbdelve_dev";
+    const FORMAT_AND_DATABASE: &str = "default_format=TSV&database=vernier_dev";
 
     fn answer(sql: &str, extra: &str) -> (u16, String) {
         let (status, body) = raw(sql, &format!("{FORMAT_AND_DATABASE}{extra}"));
@@ -4408,7 +4408,7 @@ mod live {
     /// What `sql::misread` and the Read-only classifier take the server's
     /// lexer to do, checked against 26.8.
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_servers_lexer_is_what_the_classifier_assumes() {
         assert_eq!(says("SELECT 1 AS `a\\`b` FORMAT TSVWithNames"), "a`b\n1");
         assert_eq!(
@@ -4444,7 +4444,7 @@ mod live {
     /// What the Read-only hold (`readonly=2`) and the floor reads of the
     /// classifier take the server to do.
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_readonly_2_is_what_the_classifier_takes_it_to_be() {
         let held = "&readonly=2";
         for sql in [
@@ -4516,7 +4516,7 @@ mod live {
     const RUNAWAY: &str = "SELECT sleepEachRow(1) FROM numbers(60) SETTINGS max_block_size = 1";
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_reads_run_at_once_take_the_time_of_one() {
         crate::db::at_once::reads_overlap(
             &live_any(live_config()),
@@ -4527,7 +4527,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_cancel_stops_every_read_run_at_once() {
         crate::db::at_once::a_cancel_stops_them_all(
             &live_any(live_config()),
@@ -4537,7 +4537,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_cancel_of_one_read_run_at_once_leaves_the_other_running() {
         crate::db::at_once::a_cancel_stops_only_its_own(
             &live_any(live_config()),
@@ -4563,26 +4563,26 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_key_column_named_with_a_space_or_a_backtick_still_orders_paging() {
         let connection = live();
         ran(
             &connection,
-            "CREATE OR REPLACE TABLE dbdelve_dev.fix2_keys (`user id` UInt64, `we\\`ird` UInt64, n UInt64) \
+            "CREATE OR REPLACE TABLE vernier_dev.fix2_keys (`user id` UInt64, `we\\`ird` UInt64, n UInt64) \
              ENGINE = MergeTree ORDER BY (`user id`, `we\\`ird`)",
         );
         let structure = live_any(live_config())
-            .structure("dbdelve_dev", "fix2_keys")
+            .structure("vernier_dev", "fix2_keys")
             .unwrap();
-        ran(&connection, "DROP TABLE dbdelve_dev.fix2_keys");
+        ran(&connection, "DROP TABLE vernier_dev.fix2_keys");
         assert_eq!(structure.row_key(), ["user id", "we`ird"]);
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_every_seeded_kind_lands_right_and_the_system_databases_stay_out() {
         let catalog = live_any(live_config()).catalog().unwrap();
-        let seeded = kinds_of(&catalog, "dbdelve_dev");
+        let seeded = kinds_of(&catalog, "vernier_dev");
         let kind = |name: &str| {
             seeded
                 .iter()
@@ -4612,7 +4612,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_servers_own_row_and_byte_counts_ride_on_the_catalog() {
         let connection = live_any(live_config());
         let catalog = connection.catalog().unwrap();
@@ -4620,7 +4620,7 @@ mod live {
             catalog
                 .schemas
                 .iter()
-                .find(|schema| schema.name == "dbdelve_dev")
+                .find(|schema| schema.name == "vernier_dev")
                 .and_then(|schema| schema.relations.iter().find(|r| r.name == name))
                 .unwrap()
         };
@@ -4634,10 +4634,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_materialized_view_without_a_target_hides_its_inner_table() {
         let connection = live();
-        let view = format!("dbdelve_tmp_{}", marker());
+        let view = format!("vernier_tmp_{}", marker());
         ran(
             &connection,
             &format!(
@@ -4651,7 +4651,7 @@ mod live {
         ));
         let catalog = live_any(live_config()).catalog();
         ran(&connection, &format!("DROP VIEW `{view}`"));
-        let listed = kinds_of(&catalog.unwrap(), "dbdelve_dev");
+        let listed = kinds_of(&catalog.unwrap(), "vernier_dev");
         assert!(inner.parse::<u32>().unwrap() > 0, "no .inner table to hide");
         assert!(
             listed
@@ -4666,56 +4666,56 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_databases_list_flags_the_one_connected_to() {
         let databases = live_any(live_config())
             .databases(Engine::ClickHouse)
             .unwrap();
-        assert_eq!(databases.current.as_deref(), Some("dbdelve_dev"));
+        assert_eq!(databases.current.as_deref(), Some("vernier_dev"));
         assert!(databases.names.iter().any(|name| name == "analytics"));
-        assert!(databases.names.iter().any(|name| name == "dbdelve_dev"));
+        assert!(databases.names.iter().any(|name| name == "vernier_dev"));
         assert_eq!(databases.names.last().map(String::as_str), Some("system"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_ddl_of_a_table_and_a_view_is_the_servers_own() {
         let connection = live_any(live_config());
         let table = connection
-            .ddl("dbdelve_dev", "accounts", RelationKind::Table)
+            .ddl("vernier_dev", "accounts", RelationKind::Table)
             .unwrap();
         let view = connection
-            .ddl("dbdelve_dev", "active_accounts", RelationKind::View)
+            .ddl("vernier_dev", "active_accounts", RelationKind::View)
             .unwrap();
         assert!(
-            table.starts_with("CREATE TABLE dbdelve_dev.accounts"),
+            table.starts_with("CREATE TABLE vernier_dev.accounts"),
             "{table}"
         );
         assert!(table.contains('\n') && table.ends_with(';'), "{table}");
-        assert!(view.contains("VIEW dbdelve_dev.active_accounts"), "{view}");
+        assert!(view.contains("VIEW vernier_dev.active_accounts"), "{view}");
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_the_ddl_of_a_materialized_view_and_a_dictionary_is_the_servers_own() {
         let connection = live_any(live_config());
         let view = connection
             .ddl(
-                "dbdelve_dev",
+                "vernier_dev",
                 "events_per_kind_mv",
                 RelationKind::MaterializedView,
             )
             .unwrap();
         let dictionary = connection
-            .ddl("dbdelve_dev", "plan_seats", RelationKind::Table)
+            .ddl("vernier_dev", "plan_seats", RelationKind::Table)
             .unwrap();
         assert!(
-            view.starts_with("CREATE MATERIALIZED VIEW dbdelve_dev.events_per_kind_mv"),
+            view.starts_with("CREATE MATERIALIZED VIEW vernier_dev.events_per_kind_mv"),
             "{view}"
         );
         assert!(view.ends_with(';'), "{view}");
         assert!(
-            dictionary.starts_with("CREATE DICTIONARY dbdelve_dev.plan_seats"),
+            dictionary.starts_with("CREATE DICTIONARY vernier_dev.plan_seats"),
             "{dictionary}"
         );
         assert!(
@@ -4725,10 +4725,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_events_shows_its_keys_and_accounts_keys_its_rows() {
         let connection = live_any(live_config());
-        let events = connection.structure("dbdelve_dev", "events").unwrap();
+        let events = connection.structure("vernier_dev", "events").unwrap();
         let named = |name: &str| {
             events
                 .indexes
@@ -4770,19 +4770,19 @@ mod live {
         assert_eq!(kind.data_type, "LowCardinality(String)");
         assert!(!kind.nullable);
 
-        let accounts = connection.structure("dbdelve_dev", "accounts").unwrap();
+        let accounts = connection.structure("vernier_dev", "accounts").unwrap();
         assert_eq!(accounts.row_key(), ["id"]);
         let email = accounts.columns.iter().find(|c| c.name == "email").unwrap();
         assert!(email.nullable);
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_computed_column_a_skip_index_and_a_sample_key_are_shown() {
         let connection = live_any(live_config());
-        let table = "dbdelve_structure_probe";
+        let table = "vernier_structure_probe";
         let create = format!(
-            "CREATE TABLE dbdelve_dev.{table} (
+            "CREATE TABLE vernier_dev.{table} (
                 id UInt64,
                 ts DateTime,
                 kept String MATERIALIZED toString(id),
@@ -4793,13 +4793,13 @@ mod live {
                 INDEX by_ts ts TYPE minmax GRANULARITY 2
             ) ENGINE = MergeTree ORDER BY (id, toDate(ts)) SAMPLE BY id"
         );
-        let drop = format!("DROP TABLE IF EXISTS dbdelve_dev.{table}");
+        let drop = format!("DROP TABLE IF EXISTS vernier_dev.{table}");
         let cancel = CancelToken::default();
         connection.query(&drop, &cancel, Fetch::default()).unwrap();
         connection
             .query(&create, &cancel, Fetch::default())
             .unwrap();
-        let structure = connection.structure("dbdelve_dev", table);
+        let structure = connection.structure("vernier_dev", table);
         connection.query(&drop, &cancel, Fetch::default()).unwrap();
         let structure = structure.unwrap();
 
@@ -4856,11 +4856,11 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_view_and_a_dictionary_have_columns_and_no_keys() {
         let connection = live_any(live_config());
         for relation in ["active_accounts", "plan_seats", "events_per_kind_mv"] {
-            let structure = connection.structure("dbdelve_dev", relation).unwrap();
+            let structure = connection.structure("vernier_dev", relation).unwrap();
             assert!(!structure.columns.is_empty(), "{relation}");
             assert!(structure.indexes.is_empty(), "{relation}");
             assert!(structure.constraints.is_empty(), "{relation}");
@@ -4868,39 +4868,39 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_copied_drop_and_truncate_run_on_throwaway_objects() {
         let connection = live();
-        let schema = "dbdelve_dev";
+        let schema = "vernier_dev";
         ran(
             &connection,
-            "CREATE OR REPLACE TABLE dbdelve_dev.copy_drop_source (n UInt64) ENGINE = MergeTree ORDER BY n",
+            "CREATE OR REPLACE TABLE vernier_dev.copy_drop_source (n UInt64) ENGINE = MergeTree ORDER BY n",
         );
         ran(
             &connection,
-            "CREATE OR REPLACE TABLE dbdelve_dev.copy_drop_table (n UInt64) ENGINE = MergeTree ORDER BY n",
+            "CREATE OR REPLACE TABLE vernier_dev.copy_drop_table (n UInt64) ENGINE = MergeTree ORDER BY n",
         );
         ran(
             &connection,
-            "CREATE OR REPLACE TABLE dbdelve_dev.copy_drop_foreign (n UInt64) ENGINE = MergeTree ORDER BY n",
+            "CREATE OR REPLACE TABLE vernier_dev.copy_drop_foreign (n UInt64) ENGINE = MergeTree ORDER BY n",
         );
         ran(
             &connection,
-            "CREATE OR REPLACE VIEW dbdelve_dev.copy_drop_view AS SELECT n FROM dbdelve_dev.copy_drop_source",
+            "CREATE OR REPLACE VIEW vernier_dev.copy_drop_view AS SELECT n FROM vernier_dev.copy_drop_source",
         );
         ran(
             &connection,
-            "CREATE OR REPLACE MATERIALIZED VIEW dbdelve_dev.copy_drop_mv ENGINE = MergeTree ORDER BY n AS SELECT n FROM dbdelve_dev.copy_drop_source",
+            "CREATE OR REPLACE MATERIALIZED VIEW vernier_dev.copy_drop_mv ENGINE = MergeTree ORDER BY n AS SELECT n FROM vernier_dev.copy_drop_source",
         );
         ran(
             &connection,
-            "CREATE OR REPLACE DICTIONARY dbdelve_dev.copy_drop_dictionary (n UInt64) PRIMARY KEY n \
-             SOURCE(CLICKHOUSE(DB 'dbdelve_dev' TABLE 'copy_drop_source' USER 'dbdelve' PASSWORD 'dbdelve')) \
+            "CREATE OR REPLACE DICTIONARY vernier_dev.copy_drop_dictionary (n UInt64) PRIMARY KEY n \
+             SOURCE(CLICKHOUSE(DB 'vernier_dev' TABLE 'copy_drop_source' USER 'vernier' PASSWORD 'vernier')) \
              LAYOUT(FLAT()) LIFETIME(0)",
         );
         ran(
             &connection,
-            "INSERT INTO dbdelve_dev.copy_drop_table VALUES (1), (2)",
+            "INSERT INTO vernier_dev.copy_drop_table VALUES (1), (2)",
         );
 
         ran(
@@ -4909,7 +4909,7 @@ mod live {
         );
         let rows = cells(&ran(
             &connection,
-            "SELECT count() FROM dbdelve_dev.copy_drop_table",
+            "SELECT count() FROM vernier_dev.copy_drop_table",
         ));
         assert_eq!(rows[0][0].as_deref(), Some("0"));
 
@@ -4925,7 +4925,7 @@ mod live {
             let left = cells(&ran(
                 &connection,
                 &format!(
-                    "SELECT count() FROM system.tables WHERE database = 'dbdelve_dev' AND name = '{name}'"
+                    "SELECT count() FROM system.tables WHERE database = 'vernier_dev' AND name = '{name}'"
                 ),
             ));
             assert_eq!(left[0][0].as_deref(), Some("0"), "{statement}");
@@ -4942,12 +4942,12 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_capped_preview_exports_to_csv_with_its_header() {
         let connection = live();
         let result = ran(
             &connection,
-            &select_top_sql(Engine::ClickHouse, "dbdelve_dev", "conformance").unwrap(),
+            &select_top_sql(Engine::ClickHouse, "vernier_dev", "conformance").unwrap(),
         );
         assert!(!result.rows.is_empty());
         let csv = render_rows_as(RowsAs::CsvWithHeader, Engine::ClickHouse, None, &result);
@@ -5010,11 +5010,11 @@ mod live {
         Subject {
             connection: live_any(live_config()),
             engine: Engine::ClickHouse,
-            schema: "dbdelve_dev",
+            schema: "vernier_dev",
             relation: "conformance",
             key: "id",
             columns: &COLUMNS,
-            read: sql_read(Engine::ClickHouse, "dbdelve_dev"),
+            read: sql_read(Engine::ClickHouse, "vernier_dev"),
             endless: "SELECT number FROM system.numbers",
             runaway: RUNAWAY,
             read_only_refusal: "readonly mode",
@@ -5035,7 +5035,7 @@ mod live {
                     ("flag", 0, "true"),
                     ("flag", 1, "false"),
                 ],
-                find: Box::new(|key| sql_find(Engine::ClickHouse, "dbdelve_dev", key)),
+                find: Box::new(|key| sql_find(Engine::ClickHouse, "vernier_dev", key)),
             }),
             _guard: None,
         }
@@ -5044,7 +5044,7 @@ mod live {
     fn previewed(connection: &Connection, table: &str) -> QueryResult {
         connection
             .generated(
-                &format!("SELECT * FROM `dbdelve_dev`.`{table}`"),
+                &format!("SELECT * FROM `vernier_dev`.`{table}`"),
                 &CancelToken::default(),
                 Fetch::default(),
             )
@@ -5052,11 +5052,11 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_each_seeded_table_is_described_as_the_design_says() {
         use crate::db::UpdateSpelling::{AlterUpdate, Update};
         let connection = live();
-        let described = |table: &str| connection.describe("dbdelve_dev", table).unwrap().unwrap();
+        let described = |table: &str| connection.describe("vernier_dev", table).unwrap().unwrap();
         assert_eq!(described("edit_lw").update, Update);
         assert_eq!(described("edit_heavy").update, AlterUpdate);
         assert_eq!(described("edit_sum").update, AlterUpdate);
@@ -5065,7 +5065,7 @@ mod live {
         assert!(described("edit_proj").delete_refusal.is_some());
         assert!(
             connection
-                .describe("dbdelve_dev", "no_such_table")
+                .describe("vernier_dev", "no_such_table")
                 .unwrap()
                 .is_none()
         );
@@ -5085,19 +5085,19 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_modified_block_setting_shows_in_the_next_describe() {
         use crate::db::UpdateSpelling::{AlterUpdate, Update};
         let connection = live();
         let table = format!("edit_modify_{}", marker());
-        let name = format!("dbdelve_dev.{table}");
+        let name = format!("vernier_dev.{table}");
         ran(
             &connection,
             &format!("CREATE TABLE {name} (id UInt32) ENGINE = MergeTree ORDER BY id"),
         );
         let update = |connection: &Connection| {
             connection
-                .describe("dbdelve_dev", &table)
+                .describe("vernier_dev", &table)
                 .unwrap()
                 .unwrap()
                 .update
@@ -5115,10 +5115,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_typed_update_the_server_refuses_gains_the_alter_hint() {
         let connection = live();
-        let name = format!("dbdelve_dev.typed_update_{}", marker());
+        let name = format!("vernier_dev.typed_update_{}", marker());
         ran(
             &connection,
             &format!("CREATE TABLE {name} (id UInt32, v String) ENGINE = MergeTree ORDER BY id"),
@@ -5151,10 +5151,10 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_typed_update_refused_for_the_engine_gains_no_alter_hint() {
         let connection = live();
-        let name = format!("dbdelve_dev.summing_{}", marker());
+        let name = format!("vernier_dev.summing_{}", marker());
         ran(
             &connection,
             &format!(
@@ -5177,11 +5177,11 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_every_value_read_is_found_again_by_its_match_term() {
         let connection = live();
         let table = format!("edit_match_{}", marker());
-        let name = format!("dbdelve_dev.{table}");
+        let name = format!("vernier_dev.{table}");
         ran(
             &connection,
             &format!(
@@ -5228,7 +5228,7 @@ mod live {
                 })
                 .collect();
             let predicate = terms.join(" AND ");
-            let delete = format!("DELETE FROM `dbdelve_dev`.`{table}` WHERE {predicate}");
+            let delete = format!("DELETE FROM `vernier_dev`.`{table}` WHERE {predicate}");
             assert!(
                 crate::sql::is_generated_write_on(Engine::ClickHouse, &delete),
                 "{delete}"
@@ -5262,13 +5262,13 @@ mod live {
         ran(
             connection,
             &format!(
-                "CREATE TABLE dbdelve_dev.{table} ({columns}) ENGINE = MergeTree ORDER BY id\
+                "CREATE TABLE vernier_dev.{table} ({columns}) ENGINE = MergeTree ORDER BY id\
                  {settings}"
             ),
         );
         ran(
             connection,
-            &format!("INSERT INTO dbdelve_dev.{table} VALUES {rows}"),
+            &format!("INSERT INTO vernier_dev.{table} VALUES {rows}"),
         );
         table
     }
@@ -5302,10 +5302,10 @@ mod live {
         let predicate = named(read, id);
         match target.update {
             crate::db::UpdateSpelling::Update => {
-                format!("UPDATE `dbdelve_dev`.`{table}` SET `label` = '{label}' WHERE {predicate}")
+                format!("UPDATE `vernier_dev`.`{table}` SET `label` = '{label}' WHERE {predicate}")
             }
             crate::db::UpdateSpelling::AlterUpdate => format!(
-                "ALTER TABLE `dbdelve_dev`.`{table}` UPDATE `label` = '{label}' WHERE \
+                "ALTER TABLE `vernier_dev`.`{table}` UPDATE `label` = '{label}' WHERE \
                  {predicate} SETTINGS mutations_sync = 2"
             ),
         }
@@ -5318,12 +5318,12 @@ mod live {
     fn labels(connection: &Connection, table: &str) -> String {
         text(&ran(
             connection,
-            &format!("SELECT label FROM dbdelve_dev.{table} ORDER BY id, label"),
+            &format!("SELECT label FROM vernier_dev.{table} ORDER BY id, label"),
         ))
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_guarded_edit_lands_on_its_one_row_in_either_update_spelling() {
         use crate::db::UpdateSpelling::{AlterUpdate, Update};
         let connection = live();
@@ -5349,17 +5349,17 @@ mod live {
             );
 
             let delete = format!(
-                "DELETE FROM `dbdelve_dev`.`{table}` WHERE {}",
+                "DELETE FROM `vernier_dev`.`{table}` WHERE {}",
                 named(&read, "2")
             );
             written(&connection, &delete).unwrap_or_else(|error| panic!("{delete}: {error}"));
             assert_eq!(labels(&connection, &table), "uno\nthree", "{spelling:?}");
-            ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+            ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
         }
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_identical_rows_and_a_row_changed_behind_the_grid_are_refused_unwritten() {
         let connection = live();
         let table = scratch(
@@ -5372,21 +5372,21 @@ mod live {
         for statement in [
             relabel(&table, &read, "1", "changed"),
             format!(
-                "DELETE FROM `dbdelve_dev`.`{table}` WHERE {}",
+                "DELETE FROM `vernier_dev`.`{table}` WHERE {}",
                 named(&read, "1")
             ),
         ] {
             let error = written(&connection, &statement).unwrap_err();
             assert_eq!(
                 error.message,
-                "2 rows have exactly these values, so DBDelve will not change one of them."
+                "2 rows have exactly these values, so Vernier will not change one of them."
             );
         }
         assert_eq!(labels(&connection, &table), "same\nsame\ntwo");
 
         ran(
             &connection,
-            &format!("UPDATE dbdelve_dev.{table} SET label = 'behind' WHERE id = 2"),
+            &format!("UPDATE vernier_dev.{table} SET label = 'behind' WHERE id = 2"),
         );
         let error = written(&connection, &relabel(&table, &read, "2", "mine")).unwrap_err();
         assert_eq!(
@@ -5394,11 +5394,11 @@ mod live {
             "No row has these values any more; it was changed or deleted since it was read."
         );
         assert_eq!(labels(&connection, &table), "same\nsame\nbehind");
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_two_instants_shown_as_one_wall_clock_time_are_refused_unwritten() {
         let connection = live();
         // 05:30 and 06:30 UTC, either side of New York's clocks going back,
@@ -5418,23 +5418,23 @@ mod live {
         for statement in [
             relabel(&table, &read, "1", "changed"),
             format!(
-                "DELETE FROM `dbdelve_dev`.`{table}` WHERE {}",
+                "DELETE FROM `vernier_dev`.`{table}` WHERE {}",
                 named(&read, "1")
             ),
         ] {
             let error = written(&connection, &statement).unwrap_err();
             assert_eq!(
                 error.message,
-                "2 rows have exactly these values, so DBDelve will not change one of them.",
+                "2 rows have exactly these values, so Vernier will not change one of them.",
                 "{statement}"
             );
         }
         assert_eq!(labels(&connection, &table), "same\nsame");
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_batch_stops_at_its_first_refusal_and_what_ran_stays() {
         let connection = live();
         for settings in [BLOCKS, ""] {
@@ -5448,7 +5448,7 @@ mod live {
             ran(
                 &connection,
                 &format!(
-                    "ALTER TABLE dbdelve_dev.{table} UPDATE label = 'behind' WHERE id = 2 \
+                    "ALTER TABLE vernier_dev.{table} UPDATE label = 'behind' WHERE id = 2 \
                      SETTINGS mutations_sync = 2"
                 ),
             );
@@ -5463,12 +5463,12 @@ mod live {
                  more; it was changed or deleted since it was read."
             );
             assert_eq!(labels(&connection, &table), "edited\nbehind\nthree");
-            ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+            ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
         }
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_delete_a_projection_withholds_is_refused_before_its_guard() {
         let connection = live();
         let table = scratch(
@@ -5480,7 +5480,7 @@ mod live {
         );
         let read = previewed(&connection, &table);
         let delete = format!(
-            "DELETE FROM `dbdelve_dev`.`{table}` WHERE {}",
+            "DELETE FROM `vernier_dev`.`{table}` WHERE {}",
             named(&read, "1")
         );
         let error = written(&connection, &delete).unwrap_err();
@@ -5492,24 +5492,24 @@ mod live {
         assert_eq!(labels(&connection, &table), "one\ntwo");
         written(&connection, &relabel(&table, &read, "1", "uno")).unwrap();
         assert_eq!(labels(&connection, &table), "uno\ntwo");
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_new_row_lands_each_gallery_type_through_a_quoted_literal() {
         let connection = live();
         let table = format!("edit_gallery_{}", marker());
         ran(
             &connection,
-            &format!("CREATE TABLE dbdelve_dev.{table} AS dbdelve_dev.type_gallery"),
+            &format!("CREATE TABLE vernier_dev.{table} AS vernier_dev.type_gallery"),
         );
         let seeded = ran(
             &connection,
-            "SELECT * FROM dbdelve_dev.type_gallery WHERE id = 1",
+            "SELECT * FROM vernier_dev.type_gallery WHERE id = 1",
         );
         let types: Vec<(String, String)> = connection
-            .structure("dbdelve_dev", &table)
+            .structure("vernier_dev", &table)
             .unwrap()
             .columns
             .iter()
@@ -5521,7 +5521,7 @@ mod live {
             let value = seeded.rows[0].get(at);
             let insert = crate::sql::insert_row(
                 Engine::ClickHouse,
-                "dbdelve_dev",
+                "vernier_dev",
                 &table,
                 &[("id", Some("1")), (column.name.as_str(), value)],
                 &types,
@@ -5537,7 +5537,7 @@ mod live {
                     let back = ran(
                         &connection,
                         &format!(
-                            "SELECT `{0}` FROM dbdelve_dev.{table} WHERE id = 1",
+                            "SELECT `{0}` FROM vernier_dev.{table} WHERE id = 1",
                             column.name
                         ),
                     );
@@ -5546,20 +5546,20 @@ mod live {
                     }
                 }
             }
-            ran(&connection, &format!("TRUNCATE TABLE dbdelve_dev.{table}"));
+            ran(&connection, &format!("TRUNCATE TABLE vernier_dev.{table}"));
         }
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
         // A NUL the gate refuses, Nested's dotted subcolumns it cannot name,
         // and a state the server cannot parse from text.
         assert_eq!(refused, ["fixed", "nested.k", "nested.v", "state"]);
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_variant_and_json_text_with_backslashes_round_trips_through_an_insert() {
         let connection = live();
         let table = format!("edit_roundtrip_{}", marker());
-        let name = format!("dbdelve_dev.{table}");
+        let name = format!("vernier_dev.{table}");
         ran(
             &connection,
             &format!(
@@ -5607,7 +5607,7 @@ mod live {
                 })
                 .collect();
             let insert =
-                crate::sql::insert_row(Engine::ClickHouse, "dbdelve_dev", &table, &values, &types)
+                crate::sql::insert_row(Engine::ClickHouse, "vernier_dev", &table, &values, &types)
                     .unwrap();
             assert!(crate::sql::is_generated_write_on(
                 Engine::ClickHouse,
@@ -5624,13 +5624,13 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_an_edited_cell_with_awkward_characters_reads_back_as_typed() {
         use crate::result_grid::PendingRow;
         let connection = live();
         for settings in [BLOCKS, ""] {
             let table = format!("edit_roundtrip_{}", marker());
-            let name = format!("dbdelve_dev.{table}");
+            let name = format!("vernier_dev.{table}");
             ran(
                 &connection,
                 &format!(
@@ -5670,7 +5670,7 @@ mod live {
                     .unwrap();
                 let name_of = types[column].0.clone();
                 let pending = PendingRow {
-                    schema: "dbdelve_dev".into(),
+                    schema: "vernier_dev".into(),
                     table: table.clone(),
                     sets: vec![(
                         name_of.clone(),
@@ -5706,7 +5706,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_imported_rows_land_in_one_insert() {
         use crate::import_rows::Value;
         let connection = live();
@@ -5732,7 +5732,7 @@ mod live {
         ];
         let insert = crate::sql::insert_rows(
             Engine::ClickHouse,
-            "dbdelve_dev",
+            "vernier_dev",
             &table,
             &columns,
             &[
@@ -5750,7 +5750,7 @@ mod live {
         assert_eq!(
             cells(&ran(
                 &connection,
-                &format!("SELECT id, label, flag, day FROM dbdelve_dev.{table} ORDER BY id")
+                &format!("SELECT id, label, flag, day FROM vernier_dev.{table} ORDER BY id")
             )),
             [
                 ["0", "zero", "false", "2000-01-01"].map(|cell| Some(cell.to_string())),
@@ -5758,11 +5758,11 @@ mod live {
                 ["2", "", "false", "2024-01-02"].map(|cell| Some(cell.to_string())),
             ]
         );
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_row_with_every_awkward_value_is_edited_and_deleted_by_its_values() {
         let connection = live();
         for settings in [BLOCKS, ""] {
@@ -5770,7 +5770,7 @@ mod live {
             ran(
                 &connection,
                 &format!(
-                    "CREATE TABLE dbdelve_dev.{table} (id UInt32, label String, \
+                    "CREATE TABLE vernier_dev.{table} (id UInt32, label String, \
                      ns Nullable(String), f Float64, d DateTime64(6, 'UTC'), \
                      arr Array(String), m Map(String, UInt8)) \
                      ENGINE = MergeTree ORDER BY id{settings}"
@@ -5779,7 +5779,7 @@ mod live {
             ran(
                 &connection,
                 &format!(
-                    "INSERT INTO dbdelve_dev.{table} VALUES \
+                    "INSERT INTO vernier_dev.{table} VALUES \
                      (1, 'one', NULL, nan, '2024-01-02 03:04:05.123456', ['a\\'b', ''], {{'k': 1}}), \
                      (2, 'two', 'x', 1.5, '2024-01-02 03:04:05.000001', [], {{}})"
                 ),
@@ -5789,41 +5789,41 @@ mod live {
             written(&connection, &update).unwrap_or_else(|error| panic!("{update}: {error}"));
             assert_eq!(labels(&connection, &table), "uno\ntwo");
             let delete = format!(
-                "DELETE FROM `dbdelve_dev`.`{table}` WHERE {}",
+                "DELETE FROM `vernier_dev`.`{table}` WHERE {}",
                 named(&previewed(&connection, &table), "1")
             );
             written(&connection, &delete).unwrap_or_else(|error| panic!("{delete}: {error}"));
             assert_eq!(labels(&connection, &table), "two");
-            ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+            ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
         }
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_sorting_key_and_a_partition_key_column_cannot_be_edited() {
         let connection = live();
         let table = format!("edit_keys_{}", marker());
         ran(
             &connection,
             &format!(
-                "CREATE TABLE dbdelve_dev.{table} (id UInt32, part UInt8, label String) \
+                "CREATE TABLE vernier_dev.{table} (id UInt32, part UInt8, label String) \
                  ENGINE = MergeTree PARTITION BY part ORDER BY id"
             ),
         );
         ran(
             &connection,
-            &format!("INSERT INTO dbdelve_dev.{table} VALUES (1, 1, 'one')"),
+            &format!("INSERT INTO vernier_dev.{table} VALUES (1, 1, 'one')"),
         );
         let target = previewed(&connection, &table).edit.unwrap();
         assert_eq!(
             target.row_match,
             crate::db::RowMatch::EveryColumn { fixed: vec![0, 1] }
         );
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_user_without_the_privilege_is_refused_after_the_guard_and_nothing_is_written() {
         let owner = live();
         for settings in [BLOCKS, ""] {
@@ -5836,9 +5836,9 @@ mod live {
             // The reader holds no ALTER grant, and the mutation's own setting
             // is what `readonly` refuses first.
             for (user, refusal) in [
-                ("dbdelve_noalter", "ACCESS_DENIED"),
+                ("vernier_noalter", "ACCESS_DENIED"),
                 (
-                    "dbdelve_reader",
+                    "vernier_reader",
                     if settings.is_empty() {
                         "READONLY"
                     } else {
@@ -5870,7 +5870,7 @@ mod live {
                 }
             }
             assert_eq!(labels(&owner, &table), "one\ntwo");
-            ran(&owner, &format!("DROP TABLE dbdelve_dev.{table}"));
+            ran(&owner, &format!("DROP TABLE vernier_dev.{table}"));
         }
     }
 
@@ -5908,7 +5908,7 @@ mod live {
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_a_query_tabs_edit_lands_on_its_one_row_in_either_update_spelling() {
         use crate::db::UpdateSpelling::{AlterUpdate, Update};
         let connection = live();
@@ -5926,7 +5926,7 @@ mod live {
                 .expect("a query tab's MergeTree rows are editable");
             assert_eq!(
                 (target.schema.as_str(), target.table.as_str(), target.update),
-                ("dbdelve_dev", table.as_str(), spelling)
+                ("vernier_dev", table.as_str(), spelling)
             );
             let update = edited(&read, 0, 1, "uno");
             written(&connection, &update).unwrap_or_else(|error| panic!("{update}: {error}"));
@@ -5939,12 +5939,12 @@ mod live {
             let delete = deleted(&read, 1);
             written(&connection, &delete).unwrap_or_else(|error| panic!("{delete}: {error}"));
             assert_eq!(labels(&connection, &table), "uno\nthree", "{spelling:?}");
-            ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+            ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
         }
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_some_columns_name_a_row_by_those_alone_and_rows_alike_in_them_are_refused() {
         let connection = live();
         let table = scratch(
@@ -5953,7 +5953,7 @@ mod live {
             BLOCKS,
             "(1, 'one', 10), (2, 'two', 20), (3, 'two', 30), (4, 'same', 40), (4, 'same', 40)",
         );
-        let alike = "2 rows have exactly these values, so DBDelve will not change one of them.";
+        let alike = "2 rows have exactly these values, so Vernier will not change one of them.";
 
         let read = ran(
             &connection,
@@ -5979,11 +5979,11 @@ mod live {
             assert_eq!(error.message, alike, "{statement}");
         }
         assert_eq!(labels(&connection, &table), "uno\ntwo\ntwo\nsame\nsame");
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_after_a_session_timezone_is_set_a_query_tabs_rows_are_not_matched() {
         let connection = live();
         let table = scratch(
@@ -6007,11 +6007,11 @@ mod live {
         assert_eq!(cells(&preview)[0][2], cells(&before)[0][2]);
         written(&connection, &edited(&preview, 0, 1, "uno")).unwrap();
         assert_eq!(labels(&connection, &table), "uno");
-        ran(&connection, &format!("DROP TABLE dbdelve_dev.{table}"));
+        ran(&connection, &format!("DROP TABLE vernier_dev.{table}"));
     }
 
     #[test]
-    #[ignore = "requires the repository development database configured through dbdelve_CLICKHOUSE_URL"]
+    #[ignore = "requires the repository development database configured through vernier_CLICKHOUSE_URL"]
     fn live_an_unqualified_name_is_read_where_use_moved_the_session_and_a_temporary_table_is_not() {
         let connection = live();
         ran(&connection, "USE analytics");
@@ -6034,7 +6034,7 @@ mod live {
 
     crate::db::conformance::suite!(
         live_conformance,
-        "requires the repository development database configured through dbdelve_CLICKHOUSE_URL",
+        "requires the repository development database configured through vernier_CLICKHOUSE_URL",
         conformance_subject:
         connects,
         query_round_trip,

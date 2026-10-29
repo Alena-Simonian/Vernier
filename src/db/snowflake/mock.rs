@@ -176,7 +176,7 @@ impl Mock {
                 "{}/dev/snowflake/test-key-2048.p8",
                 env!("CARGO_MANIFEST_DIR")
             ),
-            database: "DBDELVE_TEST".into(),
+            database: "VERNIER_TEST".into(),
             warehouse: Some("COMPUTE_WH".into()),
             ..Default::default()
         }

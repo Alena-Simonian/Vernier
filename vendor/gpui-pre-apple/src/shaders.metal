@@ -1278,7 +1278,7 @@ float4 fill_color(Background background,
   return color;
 }
 
-// dbdelve patch: backdrop blur, ported from zui. The renderer has already
+// vernier patch: backdrop blur, ported from zui. The renderer has already
 // snapshotted the drawable beneath the blur and gaussian-blurred it on the GPU
 // (MPSImageGaussianBlur); this pass paints it back inside the rounded bounds.
 

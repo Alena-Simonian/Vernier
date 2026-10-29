@@ -12403,19 +12403,19 @@ source: src/sql_snapshots.rs
   = write_on=false select=true classify=ReadOnly [] gate ro=None rw=None full=None
 
 [mongodb] no limit · paged
-  |SELECT * FROM "dbdelve_dev"."accounts"|
+  |SELECT * FROM "vernier_dev"."accounts"|
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [mongodb] no limit · unpaged
-  |SELECT * FROM "dbdelve_dev"."accounts"|
+  |SELECT * FROM "vernier_dev"."accounts"|
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [mongodb] limit with order by · paged
-  |SELECT * FROM "dbdelve_dev"."accounts" ORDER BY "id" LIMIT 5|
+  |SELECT * FROM "vernier_dev"."accounts" ORDER BY "id" LIMIT 5|
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [mongodb] limit with order by · unpaged
-  |SELECT * FROM "dbdelve_dev"."accounts" ORDER BY "id" LIMIT 5|
+  |SELECT * FROM "vernier_dev"."accounts" ORDER BY "id" LIMIT 5|
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [mongodb] limit and offset, no table · paged
@@ -12427,11 +12427,11 @@ source: src/sql_snapshots.rs
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [mongodb] non-numeric limit · paged
-  |SELECT * FROM "dbdelve_dev"."accounts" LIMIT x|
+  |SELECT * FROM "vernier_dev"."accounts" LIMIT x|
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [mongodb] non-numeric limit · unpaged
-  |SELECT * FROM "dbdelve_dev"."accounts" LIMIT x|
+  |SELECT * FROM "vernier_dev"."accounts" LIMIT x|
   = write_on=false select=false classify=ReadWrite [Unreadable] gate ro=Some(Upgrade(ReadWrite)) rw=Some(RunOnce) full=Some(RunOnce)
 
 [redis] plain · all

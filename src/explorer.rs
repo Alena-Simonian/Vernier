@@ -1179,13 +1179,13 @@ mod tests {
         assert_eq!(
             preview_sql(
                 Engine::MySql,
-                "dbdelve_dev",
+                "vernier_dev",
                 "accounts",
                 "`state` = 'ok'",
                 Some(100),
                 200
             ),
-            "SELECT * FROM `dbdelve_dev`.`accounts` WHERE `state` = 'ok' LIMIT 100 OFFSET 200"
+            "SELECT * FROM `vernier_dev`.`accounts` WHERE `state` = 'ok' LIMIT 100 OFFSET 200"
         );
         assert_eq!(
             preview_sql(
@@ -1203,7 +1203,7 @@ mod tests {
     #[test]
     fn no_filter_generates_exactly_what_it_generated_before_there_were_filters() {
         // Byte-identical, per engine, with and without a page offset. Every
-        // preview dbdelve has ever run is this statement, and a stray space or a
+        // preview vernier has ever run is this statement, and a stray space or a
         // bare WHERE would change what the gate and `with_order_by` read back.
         for engine in [Engine::Postgres, Engine::MySql, Engine::Sqlite] {
             let qualified = engine.qualified("public", "accounts");

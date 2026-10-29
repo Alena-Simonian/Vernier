@@ -16,8 +16,8 @@ source: src/sql_snapshots.rs
   |WATCH l|
   |LPOS l "a b" COUNT 0 MAXLEN 4|
   |MULTI|
-  |LSET l 3 dbdelve:deleted:<32 hex>|
-  |LREM l 1 dbdelve:deleted:<32 hex>|
+  |LSET l 3 vernier:deleted:<32 hex>|
+  |LREM l 1 vernier:deleted:<32 hex>|
   |EXEC|
   = write_on=true select=false classify=ReadWrite [] gate ro=Some(Upgrade(ReadWrite)) rw=None full=None matches_key=exact:true other:false
 
@@ -25,8 +25,8 @@ source: src/sql_snapshots.rs
   |WATCH l|
   |LPOS l v COUNT 0 MAXLEN 1|
   |MULTI|
-  |LSET l 0 dbdelve:deleted:<32 hex>|
-  |LREM l 1 dbdelve:deleted:<32 hex>|
+  |LSET l 0 vernier:deleted:<32 hex>|
+  |LREM l 1 vernier:deleted:<32 hex>|
   |EXEC|
   = write_on=true select=false classify=ReadWrite [] gate ro=Some(Upgrade(ReadWrite)) rw=None full=None matches_key=exact:true other:false
 
@@ -34,8 +34,8 @@ source: src/sql_snapshots.rs
   |WATCH l|
   |LPOS l v COUNT 0 MAXLEN 4294967297|
   |MULTI|
-  |LSET l 4294967296 dbdelve:deleted:<32 hex>|
-  |LREM l 1 dbdelve:deleted:<32 hex>|
+  |LSET l 4294967296 vernier:deleted:<32 hex>|
+  |LREM l 1 vernier:deleted:<32 hex>|
   |EXEC|
   = write_on=true select=false classify=ReadWrite [] gate ro=Some(Upgrade(ReadWrite)) rw=None full=None matches_key=exact:true other:false
 

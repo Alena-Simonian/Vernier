@@ -1,6 +1,6 @@
-# Builds DBDelve for Windows and wraps the release binary in a zip.
+# Builds Vernier for Windows and wraps the release binary in a zip.
 #
-# The zip is the portable build: unzip it and run dbdelve.exe. Nothing is
+# The zip is the portable build: unzip it and run vernier.exe. Nothing is
 # installed, and nothing is signed from here.
 #
 # The fonts are compiled into the binary, and the OFL asks that their licence
@@ -33,7 +33,7 @@ $Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
 }
 
-$Name = "dbdelve-$Version-windows-$Arch"
+$Name = "vernier-$Version-windows-$Arch"
 $OutDir = Join-Path $TargetDir "windows"
 $Stage = Join-Path $OutDir $Name
 $Zip = Join-Path $OutDir "$Name.zip"
@@ -45,7 +45,7 @@ if (Test-Path $Stage) { Remove-Item -Recurse -Force $Stage }
 if (Test-Path $Zip) { Remove-Item -Force $Zip }
 New-Item -ItemType Directory -Path $Stage | Out-Null
 
-Copy-Item (Join-Path $TargetDir "release\dbdelve.exe") (Join-Path $Stage "dbdelve.exe")
+Copy-Item (Join-Path $TargetDir "release\vernier.exe") (Join-Path $Stage "vernier.exe")
 Copy-Item LICENSE, NOTICES.md $Stage
 Copy-Item -Recurse licenses (Join-Path $Stage "licenses")
 

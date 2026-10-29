@@ -74,7 +74,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        // No mode at all is a profile written before dbdelve had TLS, and
+        // No mode at all is a profile written before vernier had TLS, and
         // `prefer` is exactly what it was connecting as. A mode this build
         // cannot read is the other case, and it fails closed: whatever was
         // asked for, it was not something weaker than the strictest rung.
@@ -85,7 +85,7 @@ impl Workspace {
                 Err(message) => (SslMode::VerifyFull, Some(message)),
             },
         };
-        // No engine at all is a profile written before dbdelve had a second one,
+        // No engine at all is a profile written before vernier had a second one,
         // and Postgres is what it was. An engine this build cannot read is held
         // back by `decode_profiles` as an `UnavailableProfile`, so the `Err` arm
         // is reached only by a file the mixed reader fell back on: it is read
@@ -822,7 +822,7 @@ impl Workspace {
             return;
         };
         // The rows on an object tab were read over the old connection. Their
-        // statement is dbdelve's own, so it re-runs the moment the tab is
+        // statement is vernier's own, so it re-runs the moment the tab is
         // looked at again -- a query tab holds SQL the user wrote and is
         // theirs to re-run.
         for tab in &mut profile.session.objects {
@@ -2143,7 +2143,7 @@ pub(crate) fn is_unshared_imported_key<'a>(
 pub(crate) fn unavailable_reason(engine: &str) -> String {
     match engine.strip_prefix("plugin:") {
         Some(plugin) if !plugin.is_empty() => format!("Needs the {plugin} plugin"),
-        _ => format!("Made by a newer DBDelve (engine `{engine}`)"),
+        _ => format!("Made by a newer Vernier (engine `{engine}`)"),
     }
 }
 
@@ -2268,12 +2268,12 @@ mod tests {
         assert_eq!(unavailable_reason("plugin:odbc"), "Needs the odbc plugin");
         assert_eq!(
             unavailable_reason("zz-unknown"),
-            "Made by a newer DBDelve (engine `zz-unknown`)"
+            "Made by a newer Vernier (engine `zz-unknown`)"
         );
         // No id to name: not a plugin anyone could install.
         assert_eq!(
             unavailable_reason("plugin:"),
-            "Made by a newer DBDelve (engine `plugin:`)"
+            "Made by a newer Vernier (engine `plugin:`)"
         );
     }
 
@@ -2408,7 +2408,7 @@ mod tests {
     #[test]
     fn only_an_imported_key_no_other_profile_names_is_deleted() {
         let root =
-            std::env::temp_dir().join(format!("dbdelve-profiles-key-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("vernier-profiles-key-test-{}", std::process::id()));
         let directory = root.join("ssh-keys");
         std::fs::create_dir_all(&directory).unwrap();
         let key = directory.join("tableplus-a");

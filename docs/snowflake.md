@@ -1,6 +1,6 @@
 # Snowflake
 
-DBDelve talks to Snowflake over its SQL REST API and signs in with a key pair.
+Vernier talks to Snowflake over its SQL REST API and signs in with a key pair.
 This page is what you need to know before filling in the form, and what does
 not work yet.
 
@@ -36,7 +36,7 @@ ALTER USER my_user SET RSA_PUBLIC_KEY='MIIBIjANBgkq...';  -- the body of snowfla
 
 The form takes the key as a file, and the path has to be **absolute**, such as
 `/Users/me/.ssh/snowflake.p8`. A relative path or one starting with `~` is
-refused: DBDelve does not expand `~`, and an app opened from Finder has no
+refused: Vernier does not expand `~`, and an app opened from Finder has no
 working directory a relative path could mean anything against. The profile
 stores the path and nothing else; the key is read from the file each time it
 is needed and never copied anywhere.
@@ -77,13 +77,13 @@ chmod 600 ~/.ssh/snowflake.p8
   Unqualified names resolve against the profile's database, so write
   `MY_SCHEMA.MY_TABLE`.
 - **Results are read-only.** Snowflake does not enforce primary keys and does
-  not say which table a result column came from, so there is no row DBDelve can
+  not say which table a result column came from, so there is no row Vernier can
   safely name. Inserting a row from a table's tab works.
 - **Keys show only if they are declared.** Most pipelines never declare them;
   dbt only does under an enforced contract.
 - **A filter on a `BINARY` column fails**, including following a foreign key
   whose columns are binary.
-- **Read-only refuses what DBDelve can't parse** (`UNDROP`, `PUT`, and the
+- **Read-only refuses what Vernier can't parse** (`UNDROP`, `PUT`, and the
   like). Snowflake has no read-only setting to stop it if it writes, so it runs
   only once the profile is switched to Read-write.
 - **Explain is not offered.**

@@ -2,7 +2,7 @@ use crate::{CompositorGpuHint, DeviceErrorState, WgpuAtlas, WgpuContext};
 use anyhow::{Context as _, Result};
 use bytemuck::{Pod, Zeroable};
 use collections::FxHashMap;
-// dbdelve patch: `BackdropBlur`, for the backdrop blur.
+// vernier patch: `BackdropBlur`, for the backdrop blur.
 use gpui::{
     AtlasTextureId, BackdropBlur, Background, Bounds, DevicePixels, GpuSpecs, Path, Point,
     PrimitiveBatch, ScaledPixels, Scene, Size, get_gamma_correction_ratios,
@@ -135,7 +135,7 @@ struct WgpuPipelines {
     poly_sprites: wgpu::RenderPipeline,
     #[allow(dead_code)]
     surfaces: wgpu::RenderPipeline,
-    // dbdelve patch: backdrop blur. One separable-gaussian pipeline serves both
+    // vernier patch: backdrop blur. One separable-gaussian pipeline serves both
     // passes (the direction rides the uniform), and the composite paints the
     // blurred snapshot back over the blur's rounded bounds.
     backdrop_blur_pass: wgpu::RenderPipeline,
@@ -167,7 +167,7 @@ struct WgpuBindGroupLayouts {
     instances: wgpu::BindGroupLayout,
     texture: wgpu::BindGroupLayout,
     surfaces: wgpu::BindGroupLayout,
-    // dbdelve patch: backdrop blur. Uniform + texture + sampler, shared by the
+    // vernier patch: backdrop blur. Uniform + texture + sampler, shared by the
     // blur passes and the composite, each binding its own uniform slot.
     backdrop: wgpu::BindGroupLayout,
 }
@@ -175,7 +175,7 @@ struct WgpuBindGroupLayouts {
 /// Shared GPU context reference, used to coordinate device recovery across multiple windows.
 pub type GpuContext = Rc<RefCell<Option<WgpuContext>>>;
 
-/// dbdelve patch: uniform for one separable blur pass (`BlurPassParams` in
+/// vernier patch: uniform for one separable blur pass (`BlurPassParams` in
 /// shaders.wgsl).
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -188,7 +188,7 @@ struct BlurPassUniform {
     weights: [[f32; 4]; crate::blur_kernel::KERNEL_VECTORS],
 }
 
-/// dbdelve patch: uniform for the blur's composite pass (`BackdropBlurParams`
+/// vernier patch: uniform for the blur's composite pass (`BackdropBlurParams`
 /// in shaders.wgsl).
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -199,7 +199,7 @@ struct BackdropBlurUniform {
     source_rect: [f32; 4],
 }
 
-/// dbdelve patch: one backdrop blur's scratch: a full-resolution copy of the
+/// vernier patch: one backdrop blur's scratch: a full-resolution copy of the
 /// padded region beneath it and the two downsampled products of the separable
 /// gaussian. Sized to the region, not the frame, and dropped after a run of
 /// blur-free frames, as the Metal renderer does.
@@ -216,10 +216,10 @@ struct BackdropScratch {
     blur_b_view: wgpu::TextureView,
 }
 
-/// dbdelve patch: frames without a backdrop blur before its scratch textures
+/// vernier patch: frames without a backdrop blur before its scratch textures
 /// are released.
 const SCRATCH_RELEASE_AFTER_FRAMES: u32 = 30;
-/// dbdelve patch: blurs drawn per frame; each takes three uniform slots.
+/// vernier patch: blurs drawn per frame; each takes three uniform slots.
 const BACKDROP_MAX_BLURS: usize = 32;
 
 enum InstanceData {
@@ -250,11 +250,11 @@ struct WgpuResources {
     path_intermediate_view: Option<wgpu::TextureView>,
     path_msaa_texture: Option<wgpu::Texture>,
     path_msaa_view: Option<wgpu::TextureView>,
-    // dbdelve patch: backdrop blur.
+    // vernier patch: backdrop blur.
     backdrop_blur_params_buffer: wgpu::Buffer,
     backdrop_blur_sampler: wgpu::Sampler,
     backdrop_scratch: Option<BackdropScratch>,
-    // dbdelve patch: a blur copies out of the frame it's drawn into, which some
+    // vernier patch: a blur copies out of the frame it's drawn into, which some
     // surfaces (GL's among them) don't allow. Those frames are drawn into this
     // copyable texture instead and blitted to the surface at the end.
     backdrop_frame: Option<(wgpu::Texture, wgpu::util::TextureBlitter)>,
@@ -271,7 +271,7 @@ impl WgpuResources {
         self.path_intermediate_view = None;
         self.path_msaa_texture = None;
         self.path_msaa_view = None;
-        // dbdelve patch: backdrop blur.
+        // vernier patch: backdrop blur.
         self.backdrop_scratch = None;
         self.backdrop_frame = None;
     }
@@ -292,7 +292,7 @@ struct WgpuRendererCore {
     adapter_info: wgpu::AdapterInfo,
     target_format: wgpu::TextureFormat,
     max_texture_size: u32,
-    // dbdelve patch: backdrop blur. Frames since the last one with a blur, and
+    // vernier patch: backdrop blur. Frames since the last one with a blur, and
     // the byte stride between uniform slots in `backdrop_blur_params_buffer`.
     blur_free_frames: u32,
     backdrop_slot_stride: u64,
@@ -515,7 +515,7 @@ impl WgpuRenderer {
             );
         }
 
-        // dbdelve patch: a backdrop blur copies straight out of a surface that
+        // vernier patch: a backdrop blur copies straight out of a surface that
         // allows it; frames on other surfaces go through a copyable texture.
         let surface_usage = if surface_caps.usages.contains(wgpu::TextureUsages::COPY_SRC) {
             wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
@@ -687,7 +687,7 @@ impl WgpuRendererCore {
             ],
         });
 
-        // dbdelve patch: backdrop blur. No min_binding_size, so one layout serves
+        // vernier patch: backdrop blur. No min_binding_size, so one layout serves
         // both uniform shapes.
         let backdrop = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("backdrop_layout"),
@@ -726,7 +726,7 @@ impl WgpuRendererCore {
             instances,
             texture,
             surfaces,
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             backdrop,
         }
     }
@@ -937,7 +937,7 @@ impl WgpuRendererCore {
             },
             alpha: wgpu::BlendComponent {
                 src_factor: wgpu::BlendFactor::One,
-                // dbdelve patch: upstream adds the destination alpha (factor One),
+                // vernier patch: upstream adds the destination alpha (factor One),
                 // so on a transparent window a path over another translucent layer
                 // overstates the coverage it hands the compositor and darkens the
                 // desktop showing through. OneMinusSrcAlpha is the `over` operator
@@ -1050,7 +1050,7 @@ impl WgpuRendererCore {
             &shader_module,
         );
 
-        // dbdelve patch: backdrop blur. Neither pipeline blends: the blur passes
+        // vernier patch: backdrop blur. Neither pipeline blends: the blur passes
         // overwrite their targets and the composite replaces its region.
         let backdrop_target = wgpu::ColorTargetState {
             format: surface_format,
@@ -1092,7 +1092,7 @@ impl WgpuRendererCore {
             subpixel_sprites,
             poly_sprites,
             surfaces,
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             backdrop_blur_pass,
             backdrop_composite,
         }
@@ -1348,7 +1348,7 @@ impl WgpuRenderer {
         };
         let premultiplied_alpha =
             self.surface_config.alpha_mode == wgpu::CompositeAlphaMode::PreMultiplied;
-        // dbdelve patch: the texture rather than a view of it, which a backdrop
+        // vernier patch: the texture rather than a view of it, which a backdrop
         // blur copies out of.
         if let Err(error) = core.render_frame(
             scene,
@@ -1491,7 +1491,7 @@ impl WgpuRendererCore {
         });
         let max_texture_size = device.limits().max_texture_dimension_2d;
 
-        // dbdelve patch: backdrop blur. Three uniform slots per blur (horizontal
+        // vernier patch: backdrop blur. Three uniform slots per blur (horizontal
         // pass, vertical pass, composite), all written before the frame is
         // submitted, so every pass reads a slot of its own.
         let backdrop_slot_stride = (std::mem::size_of::<BackdropBlurUniform>() as u64)
@@ -1529,7 +1529,7 @@ impl WgpuRendererCore {
                 path_intermediate_view: None,
                 path_msaa_texture: None,
                 path_msaa_view: None,
-                // dbdelve patch: backdrop blur.
+                // vernier patch: backdrop blur.
                 backdrop_blur_params_buffer,
                 backdrop_blur_sampler,
                 backdrop_scratch: None,
@@ -1548,7 +1548,7 @@ impl WgpuRendererCore {
             adapter_info: context.adapter.get_info(),
             target_format,
             max_texture_size,
-            // dbdelve patch: backdrop blur.
+            // vernier patch: backdrop blur.
             blur_free_frames: 0,
             backdrop_slot_stride,
         }
@@ -1601,7 +1601,7 @@ impl WgpuRendererCore {
     fn render_frame(
         &mut self,
         scene: &Scene,
-        // dbdelve patch: the target texture rather than a view of it.
+        // vernier patch: the target texture rather than a view of it.
         target: &wgpu::Texture,
         size: Size<DevicePixels>,
         premultiplied_alpha: bool,
@@ -1653,7 +1653,7 @@ impl WgpuRendererCore {
             bytemuck::bytes_of(&gamma_params),
         );
 
-        // dbdelve patch: backdrop blur. The scratch textures are only worth
+        // vernier patch: backdrop blur. The scratch textures are only worth
         // holding while blurs keep appearing.
         if scene.backdrop_blurs.is_empty() {
             self.blur_free_frames = self.blur_free_frames.saturating_add(1);
@@ -1684,7 +1684,7 @@ impl WgpuRendererCore {
         })
     }
 
-    /// dbdelve patch: the copyable texture a frame with a backdrop blur is drawn
+    /// vernier patch: the copyable texture a frame with a backdrop blur is drawn
     /// into when its target can't be copied from, sized to that target.
     fn ensure_backdrop_frame(&mut self, size: wgpu::Extent3d) -> wgpu::Texture {
         let format = self.target_format;
@@ -1716,7 +1716,7 @@ impl WgpuRendererCore {
             .expect("backdrop frame was just ensured")
     }
 
-    // dbdelve patch: `frame_texture`, which backdrop blurs copy out of, in place
+    // vernier patch: `frame_texture`, which backdrop blurs copy out of, in place
     // of a view; and `blit_target`, the target to copy the finished frame onto
     // when it was drawn into the copyable backdrop frame instead.
     fn record_frame(
@@ -1767,7 +1767,7 @@ impl WgpuRendererCore {
                 ..Default::default()
             });
 
-            // dbdelve patch: blurs interleave with the batches by draw order.
+            // vernier patch: blurs interleave with the batches by draw order.
             // Before the first batch at or above a blur's order, break the pass,
             // snapshot what's been drawn, blur it and paint it back. Blurs past
             // the uniform buffer's slots are left undrawn.
@@ -1890,7 +1890,7 @@ impl WgpuRendererCore {
                     PrimitiveBatch::Surfaces(_surfaces) => {}
                 }
             }
-            // dbdelve patch: a blur above every batch still frosts what's below.
+            // vernier patch: a blur above every batch still frosts what's below.
             for (index, blur) in pending_blurs {
                 drop(pass);
                 pass =
@@ -1898,7 +1898,7 @@ impl WgpuRendererCore {
             }
         }
 
-        // dbdelve patch: backdrop blur.
+        // vernier patch: backdrop blur.
         if let Some(target) = blit_target
             && let Some((_, blitter)) = self.resources().backdrop_frame.as_ref()
         {
@@ -1918,7 +1918,7 @@ impl WgpuRendererCore {
         Ok(submission)
     }
 
-    /// dbdelve patch: snapshot the frame beneath `blur`, gaussian-blur it and
+    /// vernier patch: snapshot the frame beneath `blur`, gaussian-blur it and
     /// paint it back inside the blur's rounded bounds. Called with the main pass
     /// ended; returns it reopened, with the blur painted when it was visible.
     fn draw_backdrop_blur<'encoder>(
@@ -1950,7 +1950,7 @@ impl WgpuRendererCore {
         pass
     }
 
-    /// dbdelve patch: copies the blur's padded region out of the frame and runs
+    /// vernier patch: copies the blur's padded region out of the frame and runs
     /// the two separable gaussian passes over it into scratch. False when the
     /// blur is fully clipped and there is nothing to composite.
     fn blur_backdrop(
@@ -2133,7 +2133,7 @@ impl WgpuRendererCore {
         true
     }
 
-    /// dbdelve patch: paints a blur's blurred snapshot over its rounded bounds,
+    /// vernier patch: paints a blur's blurred snapshot over its rounded bounds,
     /// unblended, from the uniform slot `blur_backdrop` wrote.
     fn draw_backdrop_composite(&self, slot: usize, pass: &mut wgpu::RenderPass<'_>) {
         let resources = self.resources();
@@ -2152,7 +2152,7 @@ impl WgpuRendererCore {
         pass.draw(0..4, 0..1);
     }
 
-    /// dbdelve patch: backdrop blur.
+    /// vernier patch: backdrop blur.
     fn backdrop_bind_group(
         &self,
         params_offset: u64,
@@ -2186,7 +2186,7 @@ impl WgpuRendererCore {
             })
     }
 
-    /// dbdelve patch: scratch textures sized to the padded blur region. A cached
+    /// vernier patch: scratch textures sized to the padded blur region. A cached
     /// set is reused while it holds the region and still fits in the frame: the
     /// copy always fills the whole snapshot, so reuse leaves no stale texels.
     fn ensure_backdrop_scratch(
@@ -2931,7 +2931,7 @@ impl WgpuRenderer {
     not(target_family = "wasm"),
     any(test, feature = "bench-support", feature = "test-support")
 ))]
-// dbdelve patch: no view, as frames render into the texture itself.
+// vernier patch: no view, as frames render into the texture itself.
 struct HeadlessRenderTarget {
     texture: wgpu::Texture,
 }
@@ -3045,7 +3045,7 @@ impl WgpuHeadlessRenderer {
     fn render(&mut self, scene: &Scene, size: Size<DevicePixels>) -> anyhow::Result<()> {
         self.check_gpu_errors()?;
         self.ensure_render_target(size)?;
-        // dbdelve patch: the target texture rather than a view of it.
+        // vernier patch: the target texture rather than a view of it.
         let texture = self
             .render_target
             .as_ref()
@@ -3444,7 +3444,7 @@ mod tests {
             .expect("shader should validate");
     }
 
-    // dbdelve patch: the backdrop blur's uniforms are written from Rust structs,
+    // vernier patch: the backdrop blur's uniforms are written from Rust structs,
     // so their layout has to match the WGSL declarations field for field.
     #[test]
     fn backdrop_blur_uniforms_match_shader_layout() {
@@ -3631,7 +3631,7 @@ mod tests {
         );
     }
 
-    // dbdelve patch: backdrop-blur rendering tests. Headless like the tests
+    // vernier patch: backdrop-blur rendering tests. Headless like the tests
     // above, so they need a GPU adapter (software Vulkan is enough).
     #[cfg(target_os = "linux")]
     mod backdrop_blur {

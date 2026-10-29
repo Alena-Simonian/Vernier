@@ -1,5 +1,5 @@
 [package]
-name = "dbdelve"
+name = "vernier"
 version = "0.6.0"
 edition = "2024"
 license = "GPL-3.0-only"
@@ -23,7 +23,7 @@ gpui-component = { version = "=0.8.0", features = ["tree-sitter-sql", "tree-sitt
 #
 # Pinned exactly, for the same reason gpui is. The grammar decides where every
 # statement boundary falls and which statements `sql.rs` refuses to splice into,
-# so a bump changes what DBDelve sends to the server. It is a correctness
+# so a bump changes what Vernier sends to the server. It is a correctness
 # dependency, not a formatting one.
 tree-sitter = "=0.26.13"
 tree-sitter-sequel = "=0.3.11"
@@ -39,7 +39,7 @@ tree-sitter-javascript = "=0.23.1"
 
 # The vocabulary gpui-component's completion provider speaks, and nothing more:
 # no language server is started, and none could be -- the completions come from
-# the catalog DBDelve already loaded. The library re-exports `Position` but not
+# the catalog Vernier already loaded. The library re-exports `Position` but not
 # `CompletionItem`, so this is a direct dependency on a crate already in the
 # graph. Pinned exactly to the version gpui-component resolves, so the trait we
 # implement and the types we hand it are the same crate rather than two copies.
@@ -61,7 +61,7 @@ tokio-postgres = "0.7"
 # SQLite. Blocking like the Postgres driver, and for the same reason.
 #
 # `bundled` compiles the amalgamation instead of linking whatever libsqlite3
-# macOS shipped, so the version and the compile-time options are DBDelve's rather
+# macOS shipped, so the version and the compile-time options are Vernier's rather
 # than the OS release's. `column_metadata` is what makes in-grid editing
 # reachable at all: it is the only way to learn that a result column is
 # `accounts.id` and not an expression. `column_decltype` is the type tag.
@@ -123,7 +123,7 @@ hex = "=0.4.3"
 
 # TLS. The driver ships none of its own -- `Client::connect` takes a connector,
 # and `NoTls` is a real type that refuses -- so this is what makes `sslmode`
-# something DBDelve can honour rather than something it has to reject.
+# something Vernier can honour rather than something it has to reject.
 #
 # rustls rather than native-tls because rustls, rustls-native-certs and
 # rustls-pemfile were already in the graph through gpui, and the trust store
@@ -358,7 +358,7 @@ gpui_platform = { version = "=0.3.9", package = "gpui-pre-platform", features = 
 # default features, so the colored-diff console stack stays out.
 insta = { version = "=1.49.0", default-features = false }
 
-# The Job Object that ends an SSH tunnel's ssh.exe when DBDelve exits, and
+# The Job Object that ends an SSH tunnel's ssh.exe when Vernier exits, and
 # MoveFileExW for atomic no-overwrite query renames. Pinned to the version
 # already locked, so naming it adds no copy.
 [target.'cfg(windows)'.dependencies]
@@ -381,7 +381,7 @@ winresource = "=0.1.31"
 
 # gpui's Metal (macOS), DirectX 11 (Windows) and wgpu (Linux) renderers, each
 # with one blend factor changed (in two pipelines on Metal and DirectX, in the
-# path pipeline on wgpu; see the `dbdelve patch` notes in their
+# path pipeline on wgpu; see the `vernier patch` notes in their
 # metal_renderer.rs, directx_renderer.rs and wgpu_renderer.rs). Upstream sums
 # alpha instead of compositing it, so on a glass theme every tint laid over the
 # frost -- the editor and the results planes above all -- loses about a tenth
@@ -393,7 +393,7 @@ winresource = "=0.1.31"
 # behind Zeron: `Window::paint_backdrop_blur` and the `backdrop_blur` style,
 # which frost whatever a popover is painted over. The scene records the blur
 # regions and every renderer (Metal, DirectX, wgpu) draws them. Every change is
-# marked `dbdelve patch`, in gpui-pre and its renderer crates alike; re-apply
+# marked `vernier patch`, in gpui-pre and its renderer crates alike; re-apply
 # them on a gpui bump.
 # The vendored wgpu renderer is a member only so CI can run its tests;
 # default-members stays the root package, so plain cargo commands are unchanged.
@@ -412,12 +412,12 @@ gpui-pre-windows = { path = "vendor/gpui-pre-windows" }
 # `popover` colour -- a glass theme does, an opaque one never -- with a
 # hairline in place of the drop shadow that would darken the frost, and thin
 # washes for the hover and selection inside it. Every change is marked
-# `dbdelve patch`; re-apply them on a gpui-component bump.
+# `vernier patch`; re-apply them on a gpui-component bump.
 gpui-component = { path = "vendor/gpui-component" }
 
 # GPUI does layout, text shaping and scene building on the CPU every frame, so
 # an unoptimized gpui drops frames the moment a grid scrolls. Dependencies are
-# compiled optimized even in dev; DBDelve's own crate stays at opt-level 0, so
+# compiled optimized even in dev; Vernier's own crate stays at opt-level 0, so
 # incremental builds and debugging are unaffected once deps are built.
 [profile.dev.package."*"]
 opt-level = 3

@@ -8,9 +8,9 @@ fn main() {
 
     #[cfg(target_os = "windows")]
     {
-        println!("cargo:rerun-if-changed=assets/windows/dbdelve.ico");
+        println!("cargo:rerun-if-changed=assets/windows/vernier.ico");
         let mut resource = winresource::WindowsResource::new();
-        resource.set_icon("assets/windows/dbdelve.ico");
+        resource.set_icon("assets/windows/vernier.ico");
         resource
             .compile()
             .unwrap_or_else(|error| panic!("could not embed the Windows icon: {error}"));

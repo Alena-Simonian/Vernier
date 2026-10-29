@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Builds DBDelve for Linux and wraps it in a single-file AppImage: the same
+# Builds Vernier for Linux and wraps it in a single-file AppImage: the same
 # release binary, icons and desktop entry dev/package-linux.sh ships, laid out
 # the way appimagetool expects and carrying the handful of libraries that are
 # safe to travel.
@@ -10,7 +10,7 @@
 # do not want done for us. It copies everything ldd reports minus a blocklist,
 # so getting to the split below means fighting it with exclude flags and
 # hoping the blocklist it ships agrees with us next release. The set of
-# libraries DBDelve may carry is short enough to state outright, and stating it
+# libraries Vernier may carry is short enough to state outright, and stating it
 # outright is the only way a reader can check it.
 #
 # Usage: dev/package-appimage.sh
@@ -25,30 +25,30 @@ VERSION="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
 # one.
 TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
 ARCH="$(uname -m)"
-APPDIR="$TARGET_DIR/linux/dbdelve-$VERSION-$ARCH.AppDir"
-APPIMAGE="$TARGET_DIR/linux/dbdelve-$VERSION-$ARCH.AppImage"
+APPDIR="$TARGET_DIR/linux/vernier-$VERSION-$ARCH.AppDir"
+APPIMAGE="$TARGET_DIR/linux/vernier-$VERSION-$ARCH.AppImage"
 
 cargo build --release
 
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib" "$APPDIR/usr/share/applications"
-install -m 755 "$TARGET_DIR/release/dbdelve" "$APPDIR/usr/bin/dbdelve"
+install -m 755 "$TARGET_DIR/release/vernier" "$APPDIR/usr/bin/vernier"
 
-# The basename has to stay `dbdelve`: src/main.rs asks gpui for the app_id
-# "dbdelve", that app_id is what a Wayland compositor matches against a desktop
+# The basename has to stay `vernier`: src/main.rs asks gpui for the app_id
+# "vernier", that app_id is what a Wayland compositor matches against a desktop
 # entry's basename, and a rename here is a window with no icon.
-install -m 644 assets/linux/dbdelve.desktop "$APPDIR/usr/share/applications/dbdelve.desktop"
-for PNG in assets/linux/icons/dbdelve-*.png; do
+install -m 644 assets/linux/vernier.desktop "$APPDIR/usr/share/applications/vernier.desktop"
+for PNG in assets/linux/icons/vernier-*.png; do
   SIZE="${PNG##*-}"
   SIZE="${SIZE%.png}"
-  install -Dm 644 "$PNG" "$APPDIR/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/dbdelve.png"
+  install -Dm 644 "$PNG" "$APPDIR/usr/share/icons/hicolor/${SIZE}x${SIZE}/apps/vernier.png"
 done
 # appimagetool reads the desktop entry and the icon from the AppDir root, and
 # the thumbnailers read .DirIcon. All three are the files above under another
 # name.
-cp assets/linux/icons/dbdelve-256.png "$APPDIR/dbdelve.png"
-cp "$APPDIR/dbdelve.png" "$APPDIR/.DirIcon"
-ln -s usr/share/applications/dbdelve.desktop "$APPDIR/dbdelve.desktop"
+cp assets/linux/icons/vernier-256.png "$APPDIR/vernier.png"
+cp "$APPDIR/vernier.png" "$APPDIR/.DirIcon"
+ln -s usr/share/applications/vernier.desktop "$APPDIR/vernier.desktop"
 
 cp LICENSE NOTICES.md "$APPDIR/"
 # NOTICES.md points at licenses/OFL-1.1.txt, and the OFL asks that the licence
@@ -98,7 +98,7 @@ cp -R licenses "$APPDIR/"
 # loop below never sees them.
 HOST_ONLY='^(ld-linux.*|libc|libm|libdl|libpthread|librt|libresolv|libnsl|libutil|libanl|libBrokenLocale|libGL|libGLX|libGLdispatch|libGLESv[0-9]|libOpenGL|libEGL|libglapi|libgbm|libdrm|libvulkan|libX11|libX11-xcb|libxcb|libXau|libXdmcp|libbsd|libmd|libwayland-egl)\.so'
 
-ldd "$APPDIR/usr/bin/dbdelve" |
+ldd "$APPDIR/usr/bin/vernier" |
   sed -n 's/^.* => \(\/[^ ]*\) (0x[0-9a-f]*)$/\1/p' |
   while read -r LIB; do
     SONAME="$(basename "$LIB")"
@@ -121,7 +121,7 @@ cat > "$APPDIR/AppRun" <<'APPRUN'
 # split package-appimage.sh made.
 HERE="$(dirname "$(readlink -f "$0")")"
 export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-exec "$HERE/usr/bin/dbdelve" "$@"
+exec "$HERE/usr/bin/vernier" "$@"
 APPRUN
 chmod 755 "$APPDIR/AppRun"
 

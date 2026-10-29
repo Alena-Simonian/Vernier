@@ -18,7 +18,7 @@ rendering of BSON.
 **The three tree-sitter pins are correctness, not formatting.** The grammar
 decides where every statement boundary falls, which statements `sql.rs` will
 splice an `ORDER BY` into (and `mql.rs` a `.sort()`), and what the gates
-accept. A bump changes what DBDelve sends to the server. Treat them like the driver pins.
+accept. A bump changes what Vernier sends to the server. Treat them like the driver pins.
 
 **`gpui_platform`'s features are load-bearing.** Without `font-kit` the macOS
 backend swaps in a no-op text system and renders no text at all, silently.
@@ -62,7 +62,7 @@ graph through `mysql`. Named rather than inherited so a release that changes
 its defaults cannot bring `aws-lc-rs` in. `gzip` is not optional: every result
 partition after the first arrives compressed. Snowflake publishes no Rust
 driver and the community ones are tokio futures, which is why this is an HTTP
-client and not a driver. ClickHouse uses the same `ureq`, with DBDelve's own
+client and not a driver. ClickHouse uses the same `ureq`, with Vernier's own
 connector chain (TCP, the `Watched` transport that checks Cancel and an idle
 bound between ticks, then TLS) in `src/db/clickhouse/http.rs`, and `memchr`
 for finding a late exception's marker across reads.
@@ -85,7 +85,7 @@ already spawned onto, bar Postgres's cancel, which builds a throwaway runtime
 on a thread of its own. The runtime lives behind the connection mutex and
 nothing that leaves `src/db/mssql.rs` or `src/db/postgres.rs` is a future.
 MongoDB's driver brings its own: `mongo.rs` builds a one-worker multi-thread
-runtime per connection, the driver's tasks run on that worker, and DBDelve
+runtime per connection, the driver's tasks run on that worker, and Vernier
 blocks on it the same way.
 
 `tokio-rustls` in the tree is not a breach of that rule, and the rule is why:
@@ -93,5 +93,5 @@ the TLS handshake is a future belonging to the connection, so it runs inside the
 runtime the blocking client already owns, on the same thread as the connect it
 is part of. The same holds for tiberius's tokio-rustls 0.24, inside the runtime
 `mssql.rs` owns. Nothing tokio-shaped reaches GPUI's executor. Adding a tokio
-future anywhere DBDelve spawns one still panics.
+future anywhere Vernier spawns one still panics.
 

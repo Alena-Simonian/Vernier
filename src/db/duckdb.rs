@@ -351,7 +351,7 @@ impl Connection {
         Ok(result)
     }
 
-    /// dbdelve's own SQL, whose rows are never edited.
+    /// vernier's own SQL, whose rows are never edited.
     fn internal_query(&self, sql: &str) -> Result<QueryResult, DbError> {
         let _deadline = self.deadline();
         let connection = lock(&self.connection)?;
@@ -722,7 +722,7 @@ fn edit_target(
 }
 
 /// The stored schema and name of the base table `written` names in the
-/// database the connection is on, where an `UPDATE` dbdelve writes as
+/// database the connection is on, where an `UPDATE` vernier writes as
 /// `"schema"."table"` would land on the same table.
 ///
 /// Asked of the connection that ran the statement, so a `USE` -- the
@@ -1806,7 +1806,7 @@ mod tests {
 
     #[test]
     fn opening_a_path_that_is_not_there_names_it_and_creates_nothing() {
-        let path = std::env::temp_dir().join("dbdelve-duckdb-missing.duckdb");
+        let path = std::env::temp_dir().join("vernier-duckdb-missing.duckdb");
         let _ = std::fs::remove_file(&path);
         let error = Connection::open(path.to_str().unwrap(), 0)
             .err()
@@ -1831,7 +1831,7 @@ mod tests {
     }
 
     #[test]
-    fn an_insert_dbdelve_writes_passes_its_gate_and_runs() {
+    fn an_insert_vernier_writes_passes_its_gate_and_runs() {
         let connection = memory("CREATE TABLE t (id INTEGER PRIMARY KEY, name VARCHAR);");
         let statement = crate::sql::insert_row(
             Engine::DuckDb,
@@ -1854,7 +1854,7 @@ mod tests {
     }
 
     #[test]
-    fn a_filter_dbdelve_writes_matches_a_wildcard_as_itself() {
+    fn a_filter_vernier_writes_matches_a_wildcard_as_itself() {
         use crate::filter::{Operator, filter_predicate};
         let connection =
             memory("CREATE TABLE t (name VARCHAR); INSERT INTO t VALUES ('50%'), ('500');");
@@ -1939,7 +1939,7 @@ mod tests {
     }
 
     fn seeded() -> Connection {
-        memory(&std::fs::read_to_string(fixture("001-dbdelve-demo.sql")).expect("the dev seed"))
+        memory(&std::fs::read_to_string(fixture("001-vernier-demo.sql")).expect("the dev seed"))
     }
 
     fn edit_of(connection: &Connection, sql: &str) -> Option<super::super::EditTarget> {
@@ -2055,7 +2055,7 @@ mod tests {
     }
 
     #[test]
-    fn an_edit_dbdelve_writes_on_a_traced_row_passes_its_gates_and_lands() {
+    fn an_edit_vernier_writes_on_a_traced_row_passes_its_gates_and_lands() {
         use crate::result_grid::{NewValue, PendingRow};
         let connection = seeded();
         let preview =
@@ -2148,7 +2148,7 @@ mod tests {
     }
 
     #[test]
-    fn a_default_dbdelve_assigns_passes_its_gate_and_lands() {
+    fn a_default_vernier_assigns_passes_its_gate_and_lands() {
         use crate::result_grid::NewValue;
         assert!(Engine::DuckDb.assigns_default());
         let connection = memory(
@@ -2465,20 +2465,20 @@ mod tests {
         use std::sync::atomic::{AtomicUsize, Ordering};
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let directory = std::env::temp_dir().join(format!(
-            "dbdelve-conformance-duckdb-{}-{}",
+            "vernier-conformance-duckdb-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         std::fs::create_dir(&directory).expect("a scratch directory nobody else made");
         let scratch = ScratchDir(directory);
-        let path = scratch.0.join("dbdelve.duckdb");
+        let path = scratch.0.join("vernier.duckdb");
         drop(::duckdb::Connection::open(&path).expect("the scratch database is created"));
         let connection = crate::db::Connection::open(crate::db::ConnectionConfig::duckdb(
             path.to_string_lossy().into_owned(),
             0,
         ))
         .expect("connection should open");
-        let seed = std::fs::read_to_string(fixture("001-dbdelve-demo.sql")).expect("the dev seed");
+        let seed = std::fs::read_to_string(fixture("001-vernier-demo.sql")).expect("the dev seed");
         connection
             .query(&seed, &crate::db::CancelToken::default(), Fetch::default())
             .expect("the dev seed loads");

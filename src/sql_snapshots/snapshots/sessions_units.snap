@@ -222,10 +222,10 @@ source: src/sql_snapshots.rs
 [mssql] expected_sets => |2|
 [mssql] split_reads 0..8 => |SELECT 1|
 [mssql] split_reads 13..21 => |SELECT 2|
-[mssql] one_batch => error: |GO 2 repeats its batch, and dbdelve runs a batch once.|
-[mssql] batch_counts => error: |GO 2 repeats its batch, and dbdelve runs a batch once.|
+[mssql] one_batch => error: |GO 2 repeats its batch, and vernier runs a batch once.|
+[mssql] batch_counts => error: |GO 2 repeats its batch, and vernier runs a batch once.|
 [mssql] batch_repeats 0 => |ok|
-[mssql] batch_repeats 13 at SELECT 2 => error: |GO 2 repeats its batch, and dbdelve runs a batch once.|
+[mssql] batch_repeats 13 at SELECT 2 => error: |GO 2 repeats its batch, and vernier runs a batch once.|
 [mongodb] statement 0..8 => |SELECT 1|
 [mongodb] statement 10..12 => |GO|
 [mongodb] statement 13..19 => |SELECT|
@@ -710,7 +710,7 @@ source: src/sql_snapshots.rs
 [mssql] queued in 0..9 0..29 => |DECLARE @x int = 1;\u{a}SELECT @x|
 [mssql] expected_sets => |2|
 [mssql] split_reads => (none)
-[mssql] one_batch => error: |The selection holds more than one batch separated by GO, and dbdelve sends one batch at a time.|
+[mssql] one_batch => error: |The selection holds more than one batch separated by GO, and vernier sends one batch at a time.|
 [mssql] batch_counts => |ok|
 [mssql] batch_repeats 0 => |ok|
 [mssql] batch_repeats 51 at the end => |ok|
@@ -947,7 +947,7 @@ source: src/sql_snapshots.rs
 [mssql] expected_sets => |2|
 [mssql] split_reads 0..15 => |SELECT 'a\u{a}GO\u{a}b'|
 [mssql] split_reads 19..27 => |SELECT 2|
-[mssql] one_batch => error: |The selection holds more than one batch separated by GO, and dbdelve sends one batch at a time.|
+[mssql] one_batch => error: |The selection holds more than one batch separated by GO, and vernier sends one batch at a time.|
 [mssql] batch_counts => |ok|
 [mssql] batch_repeats 0 => |ok|
 [mssql] batch_repeats 19 at SELECT 2 => |ok|
@@ -1088,7 +1088,7 @@ source: src/sql_snapshots.rs
 [mssql] expected_sets => |2|
 [mssql] split_reads 9..17 => |SELECT 1|
 [mssql] split_reads 21..29 => |SELECT 2|
-[mssql] one_batch => error: |The selection holds more than one batch separated by GO, and dbdelve sends one batch at a time.|
+[mssql] one_batch => error: |The selection holds more than one batch separated by GO, and vernier sends one batch at a time.|
 [mssql] batch_counts => |ok|
 [mssql] batch_repeats 0 => |ok|
 [mssql] batch_repeats 21 at SELECT 2 => |ok|

@@ -187,7 +187,7 @@ struct Row {
 /// who denied the first prompt should not see one per connection.
 ///
 /// ssh reads a key only from a file, so a key TablePlus keeps in the Keychain
-/// is written to one of DBDelve's by `write_key`.
+/// is written to one of Vernier's by `write_key`.
 fn read_rows(
     rows: Vec<Value>,
     mut secret: impl FnMut(&str) -> Result<Option<Vec<u8>>, String>,
@@ -361,7 +361,7 @@ fn target(driver: &str) -> Result<Target, String> {
             ConnectionConfig::ClickHouse,
             &[SslMode::Prefer],
         )),
-        "snowflake" => Err("DBDelve's Snowflake signs in with a key file only".into()),
+        "snowflake" => Err("Vernier's Snowflake signs in with a key file only".into()),
         // Only the first entry of its dropdown is known, so any other comes in
         // as verify-full rather than as something it may be stronger than.
         _ if lowered.contains("sqlserver") || lowered.contains("sql server") => Ok(Target::Server(
@@ -433,7 +433,7 @@ fn ssl(row: &Row, tls: &[SslMode], notes: &mut Vec<String>) -> (SslMode, Option<
         .and_then(|index| tls.get(index).copied())
         .unwrap_or_else(|| {
             notes.push(format!(
-                "SSL mode {} isn't one DBDelve has, so it was set to verify-full",
+                "SSL mode {} isn't one Vernier has, so it was set to verify-full",
                 row.tls_mode
             ));
             SslMode::VerifyFull
@@ -447,7 +447,7 @@ fn ssl(row: &Row, tls: &[SslMode], notes: &mut Vec<String>) -> (SslMode, Option<
     if (0..row.tls_key_paths.len().max(authority))
         .any(|index| index != authority && key_path(index).is_some())
     {
-        notes.push("client certificate left off: DBDelve doesn't send one".into());
+        notes.push("client certificate left off: Vernier doesn't send one".into());
     }
     (sslmode, key_path(authority))
 }
@@ -631,7 +631,7 @@ mod tests {
         assert!(
             imported
                 .notes
-                .contains(&"client certificate left off: DBDelve doesn't send one".to_string())
+                .contains(&"client certificate left off: Vernier doesn't send one".to_string())
         );
     }
 
@@ -715,15 +715,15 @@ mod tests {
     #[test]
     fn a_connection_string_kept_as_the_password_supplies_the_login() {
         let imported = mongo_with_secret(
-            "mongodb://dbdelve:s3cret@127.0.0.1:57017/dbdelve_dev?authSource=admin",
-            json!({ "DatabasePasswordMode": 0, "DatabaseName": "dbdelve_dev" }),
+            "mongodb://vernier:s3cret@127.0.0.1:57017/vernier_dev?authSource=admin",
+            json!({ "DatabasePasswordMode": 0, "DatabaseName": "vernier_dev" }),
         );
         let config = mongo_config(&imported);
-        assert_eq!(config.server.user, "dbdelve");
+        assert_eq!(config.server.user, "vernier");
         assert_eq!(config.server.password, "s3cret");
         assert_eq!(config.options, "authSource=admin");
         assert_eq!(config.server.sslmode, SslMode::Disable);
-        assert_eq!(config.server.database, "dbdelve_dev");
+        assert_eq!(config.server.database, "vernier_dev");
         assert!(imported.notes.is_empty(), "{:?}", imported.notes);
     }
 
@@ -860,10 +860,10 @@ mod tests {
     }
 
     #[test]
-    fn a_written_key_reaches_ssh_from_dbdelves_directory() {
+    fn a_written_key_reaches_ssh_from_verniers_directory() {
         let path = std::env::temp_dir()
             .join("Application Support")
-            .join("dbdelve")
+            .join("vernier")
             .join("ssh-keys")
             .join("tableplus-a");
         assert_eq!(SshTunnel::identity_file_error(path.to_str().unwrap()), None);
@@ -890,7 +890,7 @@ mod tests {
         }
         assert_eq!(
             engine("Snowflake"),
-            Err("DBDelve's Snowflake signs in with a key file only".into())
+            Err("Vernier's Snowflake signs in with a key file only".into())
         );
         assert_eq!(engine("Oracle"), Err("Oracle isn't supported".into()));
         assert_eq!(engine("ClickHouse"), Ok(Engine::ClickHouse));
@@ -954,7 +954,7 @@ mod tests {
             assert_eq!(
                 imported.notes,
                 [format!(
-                    "SSL mode {index} isn't one DBDelve has, so it was set to verify-full"
+                    "SSL mode {index} isn't one Vernier has, so it was set to verify-full"
                 )]
             );
         }
@@ -981,7 +981,7 @@ mod tests {
                 vec!["CA certificate left off: SSL mode require doesn't check one".to_string()]
             )
         );
-        let client = vec!["client certificate left off: DBDelve doesn't send one".to_string()];
+        let client = vec!["client certificate left off: Vernier doesn't send one".to_string()];
         assert_eq!(ssl(4, ["/k.pem", "", ""]), (None, client.clone()));
         assert_eq!(ssl(4, ["", "/c.pem", ""]), (None, client));
     }
@@ -1065,7 +1065,7 @@ mod tests {
         assert_eq!(server(&unknown).sslmode, SslMode::VerifyFull);
         assert_eq!(
             unknown.notes,
-            ["SSL mode 1 isn't one DBDelve has, so it was set to verify-full"]
+            ["SSL mode 1 isn't one Vernier has, so it was set to verify-full"]
         );
     }
 
@@ -1266,7 +1266,7 @@ mod tests {
     #[test]
     fn plutil_reads_a_plist_and_refuses_a_date() {
         let directory =
-            std::env::temp_dir().join(format!("dbdelve-tableplus-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("vernier-tableplus-test-{}", std::process::id()));
         std::fs::create_dir_all(&directory).unwrap();
         let plist = |value: &str| {
             format!(
